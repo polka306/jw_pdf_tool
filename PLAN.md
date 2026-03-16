@@ -183,7 +183,7 @@ dependencies = [
 | **Phase 3** | 마우스 이벤트 어노테이션 (텍스트/사각형/원/선) | 어노테이션 완성 |
 | **Phase 4** | 이미지→PDF, LibreOffice 연동 변환, 진행 다이얼로그 | 변환 기능 완성 |
 | **Phase 4.5** | 텍스트 어노테이션 스타일 확장 (폰트 선택, 글자 크기 조절, 볼드/이탤릭) | 텍스트 어노테이션 고도화 |
-| **Phase 5** | Undo/Redo, 단축키, PyInstaller exe 패키징 | 최종 배포 |
+| **Phase 5** ✅ | Undo/Redo, 단축키, PyInstaller exe 패키징 → **v1.0.0** | 최종 배포 |
 
 각 Phase 완료 시 git 커밋.
 

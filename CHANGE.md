@@ -4,6 +4,41 @@
 
 ---
 
+## [Phase 5] 2026-03-16 — Undo/Redo, 단축키, exe 패키징 → v1.0.0
+
+### 추가
+- `app/__version__.py` — 버전 상수 (`__version__`) 중앙 관리
+  - 버전 체계: v0.x.0 = Phase x 완료, v1.0.0 = Phase 5 완료 (첫 안정 릴리즈)
+- `app/core/command_manager.py` — 커맨드 패턴 Undo/Redo 구현
+  - `Command` ABC, `CommandManager` (MAX_HISTORY=50)
+  - `MovePageCommand`, `DeletePagesCommand`, `InsertPagesCommand`, `AddAnnotationCommand`
+  - `_capture_page()` / `_insert_page()` / `_restore_page()` 내부 헬퍼
+- `pdf_editor.spec` — PyInstaller 빌드 명세 (단일 exe, 콘솔 숨김)
+- `scripts/build.bat` — Windows 빌드 스크립트
+- `tests/core/test_command_manager.py` — CommandManager 단위 테스트 27개
+
+### 수정
+- `app/__version__.py`: v1.0.0 설정
+- `pyproject.toml`: version = "1.0.0"
+- `main.py`: `setApplicationVersion(__version__)` 추가
+- `app/ui/main_window.py`:
+  - 타이틀바에 버전 표시 (`v{__version__}`)
+  - 편집 메뉴에 실행 취소(Ctrl+Z) / 다시 실행(Ctrl+Y) 액션
+  - 보기 메뉴에 이전/다음 페이지(PgUp/PgDn) 단축키
+  - 도움말 메뉴 + 정보 다이얼로그 (버전 + 기술 스택)
+  - 모든 페이지 편집 작업을 커맨드 패턴으로 래핑
+  - 파일 열기 시 Undo 스택 초기화
+- `app/ui/pdf_viewer.py`:
+  - `annotation_requested = pyqtSignal(object, str)` 추가
+  - `_finalize_annotation`, `_handle_text_annotation`: 직접 호출 대신 시그널 발생
+  - `refresh_page()` 공개 메서드 추가 (Undo 후 재렌더)
+
+### 비고
+- 자동 테스트 130/130 PASS
+- Undo/Redo 대상: 페이지 이동/삭제/삽입, 어노테이션 추가 (사각형/타원/선/텍스트)
+
+---
+
 ## [테스트] 2026-03-16 — 중간 수정 사항 자동화 테스트 추가
 
 ### 추가

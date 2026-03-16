@@ -13,8 +13,8 @@
 | 페이지 편집 (추출/삽입/삭제/순서변경) | ✅ 완료 |
 | 어노테이션 (텍스트/사각형/타원/선) | ✅ 완료 |
 | 문서 변환 (이미지/Word/PPT → PDF) | ✅ 완료 |
-| Undo/Redo | 개발 예정 |
-| exe 패키징 | 개발 예정 |
+| Undo/Redo (페이지 편집 + 어노테이션) | ✅ 완료 |
+| exe 패키징 (PyInstaller) | ✅ 완료 |
 
 ---
 
@@ -77,8 +77,20 @@ python main.py
 ## 테스트 실행
 
 ```bash
-python -m pytest tests/ -v
+uv run python -m pytest tests/ -v
 ```
+
+---
+
+## exe 빌드
+
+```bash
+scripts\build.bat
+# 또는
+uv run pyinstaller pdf_editor.spec --clean
+```
+
+결과물: `dist/PDF편집툴.exe`
 
 - **Core 테스트** (`tests/core/`) — PDF 로드/저장/렌더링, 페이지 편집 로직
 - **UI 테스트** (`tests/ui/`) — PyQt6 위젯 (offscreen 헤드리스 모드, 디스플레이 불필요)

@@ -1,6 +1,6 @@
 [project]
 name = "pdf-editor"
-version = "0.1.0"
+version = "1.0.0"
 description = "개인용 PDF 편집 데스크탑 애플리케이션"
 requires-python = ">=3.11"
 dependencies = [

@@ -211,6 +211,66 @@
 
 ---
 
+## Phase 5 — Undo/Redo, 단축키, exe 패키징
+
+### 자동화 테스트
+
+#### CommandManager 기본 동작
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| P5-A01 | [AUTO] | `test_initial_state_empty` | 초기 상태 | can_undo=False, can_redo=False | ✅ PASS |
+| P5-A02 | [AUTO] | `test_execute_enables_undo` | 커맨드 실행 후 | can_undo=True | ✅ PASS |
+| P5-A03 | [AUTO] | `test_execute_clears_redo` | 새 커맨드 실행 시 redo 스택 초기화 | can_redo=False | ✅ PASS |
+| P5-A04 | [AUTO] | `test_clear_empties_both_stacks` | clear() 호출 | 양쪽 스택 비워짐 | ✅ PASS |
+
+#### MovePageCommand
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| P5-A05 | [AUTO] | `test_execute_moves_page` | 페이지 0 → 위치 2 이동 | fitz 삽입 의미 반영 | ✅ PASS |
+| P5-A06 | [AUTO] | `test_undo_restores_order` | 이동 후 Undo | 원래 순서 복원 | ✅ PASS |
+| P5-A07 | [AUTO] | `test_same_index_is_noop` | from==to | 변경 없음 | ✅ PASS |
+
+#### DeletePagesCommand
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| P5-A08 | [AUTO] | `test_execute_reduces_page_count` | 1페이지 삭제 | page_count 감소 | ✅ PASS |
+| P5-A09 | [AUTO] | `test_undo_restores_page_count` | Undo | page_count 복원 | ✅ PASS |
+| P5-A10 | [AUTO] | `test_undo_restores_content` | Undo 후 내용 | 삭제된 텍스트 복원 | ✅ PASS |
+| P5-A11 | [AUTO] | `test_undo_multiple_pages` | 2페이지 삭제 후 Undo | 3페이지 복원 | ✅ PASS |
+
+#### InsertPagesCommand
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| P5-A12 | [AUTO] | `test_execute_increases_page_count` | 1페이지 삽입 | page_count 증가 | ✅ PASS |
+| P5-A13 | [AUTO] | `test_undo_removes_inserted_pages` | Undo | page_count 복원 | ✅ PASS |
+
+#### AddAnnotationCommand
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| P5-A14 | [AUTO] | `test_undo_restores_page_content` | 어노테이션 Undo | 원래 페이지 내용 복원 | ✅ PASS |
+| P5-A15 | [AUTO] | `test_redo_reapplies_annotation` | Undo 후 Redo | 어노테이션 재적용 | ✅ PASS |
+
+### 수동 테스트
+
+| ID | 유형 | 시나리오 | 기대 결과 | 상태 |
+|----|------|----------|-----------|------|
+| P5-M01 | [MANUAL] | 어노테이션 추가 후 Ctrl+Z | 어노테이션 취소됨, 상태바 "실행 취소: ..." | ⏳ |
+| P5-M02 | [MANUAL] | Undo 후 Ctrl+Y | 어노테이션 재적용 | ⏳ |
+| P5-M03 | [MANUAL] | 페이지 삭제 후 Ctrl+Z | 페이지 복원, 썸네일 갱신 | ⏳ |
+| P5-M04 | [MANUAL] | 페이지 순서 변경 후 Ctrl+Z | 원래 순서 복원 | ⏳ |
+| P5-M05 | [MANUAL] | PgDn/PgUp으로 페이지 이동 | 페이지 이동 정상 동작 | ⏳ |
+| P5-M06 | [MANUAL] | 도움말 > 정보 | 버전, 기술 스택 표시 | ⏳ |
+| P5-M07 | [MANUAL] | 타이틀바 버전 표시 | "PDF 편집 툴 v1.0.0" 표시 | ⏳ |
+| P5-M08 | [MANUAL] | scripts\build.bat 실행 | dist/PDF편집툴.exe 생성 | ⏳ |
+| P5-M09 | [MANUAL] | 생성된 exe 실행 | 앱 정상 실행 | ⏳ |
+
+---
+
 ## 중간 수정 사항 (버그 픽스 / 성능 개선)
 
 Phase 경계와 무관하게 발생한 버그 수정 및 성능 개선에 대한 테스트 시나리오.
@@ -266,6 +326,7 @@ Phase 경계와 무관하게 발생한 버그 수정 및 성능 개선에 대한
 
 | 날짜 | pytest 결과 | 수동 테스트 | 비고 |
 |------|------------|------------|------|
+| 2026-03-16 | 130/130 PASS | - | Phase 5 완료 시점 (v1.0.0) |
 | 2026-03-16 | 103/103 PASS | - | 중간 수정 테스트 추가 시점 |
 | 2026-03-16 | 91/91 PASS (5.78s) | Phase 0~4 자동 테스트 PASS | Phase 4 완료 시점 |
 | 2026-03-16 | 71/71 PASS (5.96s) | Phase 0~3 전체 PASS | Phase 3 완료 시점 |

@@ -5,6 +5,8 @@ Phase 3: 어노테이션 도구(텍스트/사각형/타원/선) 마우스 이벤
 
 from __future__ import annotations
 
+from copy import copy
+
 from PyQt6.QtCore import QPointF, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QColor,
@@ -37,9 +39,10 @@ class PdfViewer(QGraphicsView):
     - TEXT 도구 선택 후 클릭: 텍스트 입력 다이얼로그
     """
 
-    zoom_changed       = pyqtSignal(float)   # 줌 비율 변경
-    page_changed       = pyqtSignal(int)     # 페이지 변경 (0-based)
-    annotation_added   = pyqtSignal()        # 어노테이션이 페이지에 추가됨
+    zoom_changed          = pyqtSignal(float)   # 줌 비율 변경
+    page_changed          = pyqtSignal(int)     # 페이지 변경 (0-based)
+    annotation_added      = pyqtSignal()        # 어노테이션 추가됨 (호환용, main_window에서 emit)
+    annotation_requested  = pyqtSignal(object, str)  # (annotate_fn, description) — Undo 지원
 
     MIN_ZOOM  = 0.25
     MAX_ZOOM  = 4.0
@@ -252,7 +255,10 @@ class PdfViewer(QGraphicsView):
             self._preview_item = None
 
     def _finalize_annotation(self, start: QPointF, end: QPointF) -> None:
-        """마우스 릴리즈 시 실제 어노테이션을 PDF 페이지에 기록합니다."""
+        """마우스 릴리즈 시 어노테이션 요청 시그널을 발생시킵니다.
+
+        실제 PDF 수정은 main_window의 커맨드 매니저가 처리합니다 (Undo 지원).
+        """
         if self._doc is None or not self._doc.is_open:
             return
 
@@ -262,21 +268,28 @@ class PdfViewer(QGraphicsView):
 
         x1, y1 = self._scene_to_pdf(start)
         x2, y2 = self._scene_to_pdf(end)
-        page = self._doc.raw[self._current_page]
+        page_idx = self._current_page
+        tool = self._current_tool
+        style = copy(self._annot_style)  # 현재 스타일 스냅샷
 
         from app.core import annotator
-        tool = self._current_tool
-        style = self._annot_style
 
-        if tool == AnnotationTool.RECT:
-            annotator.add_rect(page, x1, y1, x2, y2, style)
-        elif tool == AnnotationTool.ELLIPSE:
-            annotator.add_ellipse(page, x1, y1, x2, y2, style)
-        elif tool == AnnotationTool.LINE:
-            annotator.add_line(page, x1, y1, x2, y2, style)
+        tool_labels = {
+            AnnotationTool.RECT:    "사각형 추가",
+            AnnotationTool.ELLIPSE: "타원 추가",
+            AnnotationTool.LINE:    "선 추가",
+        }
 
-        self._render_current()
-        self.annotation_added.emit()
+        def do_annotate() -> None:
+            pg = self._doc.raw[page_idx]
+            if tool == AnnotationTool.RECT:
+                annotator.add_rect(pg, x1, y1, x2, y2, style)
+            elif tool == AnnotationTool.ELLIPSE:
+                annotator.add_ellipse(pg, x1, y1, x2, y2, style)
+            elif tool == AnnotationTool.LINE:
+                annotator.add_line(pg, x1, y1, x2, y2, style)
+
+        self.annotation_requested.emit(do_annotate, tool_labels.get(tool, "어노테이션 추가"))
 
     def _handle_text_annotation(self, scene_pos: QPointF) -> None:
         """TEXT 도구: 클릭 위치에 텍스트 입력 다이얼로그를 표시합니다."""
@@ -288,13 +301,20 @@ class PdfViewer(QGraphicsView):
             return
 
         x, y = self._scene_to_pdf(scene_pos)
-        page = self._doc.raw[self._current_page]
+        page_idx = self._current_page
+        txt = text.strip()
+        style = copy(self._annot_style)
 
         from app.core.annotator import add_text
-        add_text(page, x, y, text.strip(), self._annot_style)
 
+        def do_annotate() -> None:
+            add_text(self._doc.raw[page_idx], x, y, txt, style)
+
+        self.annotation_requested.emit(do_annotate, "텍스트 추가")
+
+    def refresh_page(self) -> None:
+        """현재 페이지를 재렌더링합니다 (Undo/Redo 후 호출)."""
         self._render_current()
-        self.annotation_added.emit()
 
     # ── 렌더링 ────────────────────────────────────────────────────────────────
 
