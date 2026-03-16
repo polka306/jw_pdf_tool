@@ -1,24 +1,30 @@
 @echo off
+chcp 65001 > nul
 echo ============================================================
-echo  PDF 편집 툴 exe 빌드
+echo  PDF Editor - exe build
 echo ============================================================
 echo.
 
 cd /d "%~dp0.."
 
-echo [1/2] PyInstaller 실행...
-uv run pyinstaller pdf_editor.spec --clean --noconfirm
+echo [1/2] Running PyInstaller...
+
+if exist ".venv\Scripts\pyinstaller.exe" (
+    .venv\Scripts\pyinstaller.exe pdf_editor.spec --clean --noconfirm
+) else (
+    pyinstaller pdf_editor.spec --clean --noconfirm
+)
 
 if errorlevel 1 (
     echo.
-    echo [오류] 빌드 실패. 위 로그를 확인하세요.
+    echo [ERROR] Build failed. Check the log above.
     pause
     exit /b 1
 )
 
 echo.
-echo [2/2] 완료!
+echo [2/2] Done!
 echo.
-echo 결과물: dist\PDF편집툴.exe
+echo Output: dist\PDF편집툴.exe
 echo.
 pause
