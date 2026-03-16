@@ -14,4 +14,11 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pyinstaller>=6.0.0",
+    "pytest>=8.0.0",
+    "pytest-qt>=4.4.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# QT_QPA_PLATFORM=offscreen 은 tests/conftest.py에서 os.environ으로 설정
+

@@ -4,6 +4,24 @@
 
 ---
 
+## [테스트] 2026-03-16 — 자동화 테스트 환경 구축 (pytest + pytest-qt)
+
+### 추가
+- `tests/conftest.py` — 픽스처 (테스트용 PDF 프로그래매틱 생성, Qt offscreen 설정)
+- `tests/core/test_pdf_document.py` — PdfDocument 단위 테스트 (열기/닫기/렌더링/저장)
+- `tests/core/test_page_editor.py` — page_editor 단위 테스트 (move/delete/extract/insert)
+- `tests/ui/test_pdf_viewer.py` — PdfViewer 위젯 테스트 (pytest-qt, offscreen 헤드리스)
+- `tests/ui/test_page_panel.py` — PagePanel 위젯 테스트
+
+### 수정
+- `pyproject.toml` — dev 의존성에 pytest, pytest-qt 추가
+
+### 결과
+- 테스트 47개, 전체 통과 (4.75s)
+- 실행: `python -m pytest tests/ -v`
+
+---
+
 ## [Phase 2] 2026-03-16 — 페이지 편집 (순서변경/삭제/추출/삽입)
 
 ### 추가

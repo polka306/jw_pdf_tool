@@ -74,6 +74,17 @@ python main.py
 
 ---
 
+## 테스트 실행
+
+```bash
+python -m pytest tests/ -v
+```
+
+- **Core 테스트** (`tests/core/`) — PDF 로드/저장/렌더링, 페이지 편집 로직
+- **UI 테스트** (`tests/ui/`) — PyQt6 위젯 (offscreen 헤드리스 모드, 디스플레이 불필요)
+
+---
+
 ## 개발 문서
 
 - 구현 계획 상세: [PLAN.md](PLAN.md)
