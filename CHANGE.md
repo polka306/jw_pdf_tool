@@ -4,6 +4,18 @@
 
 ---
 
+## [fix] 2026-03-16 — 썸네일 크기 및 가로 페이지 어노테이션 좌표 수정
+
+### 수정
+- `app/ui/page_panel.py`:
+  - `setIconSize()` 누락으로 썸네일이 16×16으로 표시되던 문제 수정 → `QSize(THUMB_WIDTH, THUMB_WIDTH*1.5)` 설정
+  - `_make_item()`: `setSizeHint`를 실제 픽스맵 높이 기준으로 설정 (가로/세로 페이지 모두 대응)
+- `app/ui/pdf_viewer.py`:
+  - `_scene_to_pdf()`: 단순 `/ zoom` → `page.transformation_matrix × zoom_mat` 역변환 적용
+  - 가로 방향(rotation=90/270) 페이지에서 어노테이션 좌표가 어긋나던 문제 수정
+
+---
+
 ## [fix] 2026-03-16 — 드래그앤드롭 PyQt6 호환성 수정
 
 ### 수정

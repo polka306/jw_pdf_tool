@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QModelIndex, Qt, pyqtSignal
+from PyQt6.QtCore import QModelIndex, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QAction, QIcon, QImage, QPixmap
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -96,6 +96,7 @@ class PagePanel(QWidget):
 
         self._list = _DraggableList()
         self._list.setFixedWidth(THUMB_WIDTH + 24)
+        self._list.setIconSize(QSize(THUMB_WIDTH, int(THUMB_WIDTH * 1.5)))  # A4 세로 비율 기준 최대치
         self._list.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self._list.setStyleSheet(
             """
@@ -173,6 +174,8 @@ class PagePanel(QWidget):
         item.setIcon(QIcon(pixmap))
         item.setText(f"{page_idx + 1}")
         item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
+        # 실제 픽스맵 크기 기반으로 아이템 높이 설정 (가로/세로 페이지 모두 대응)
+        item.setSizeHint(QSize(THUMB_WIDTH + 8, pixmap.height() + 22))
         return item
 
     def _on_row_changed(self, row: int) -> None:
