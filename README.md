@@ -88,6 +88,7 @@ python -m pytest tests/ -v
 ## 개발 문서
 
 - 구현 계획 상세: [PLAN.md](PLAN.md)
+- 테스트 시나리오: [TEST_SCENARIOS.md](TEST_SCENARIOS.md)
 - 변경 이력: [CHANGE.md](CHANGE.md)
 - 협업 규칙: [CLAUDE.md](CLAUDE.md)
 
