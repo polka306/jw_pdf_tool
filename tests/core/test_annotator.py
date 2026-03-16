@@ -296,6 +296,45 @@ class TestAddTextStyled:
         assert _render_bytes(page)
 
 
+# ── 회전 페이지 텍스트 ────────────────────────────────────────────────────────
+
+class TestAddTextRotatedPage:
+    """페이지에 /Rotate 값이 있을 때 텍스트 방향이 올바른지 검증합니다."""
+
+    @pytest.mark.parametrize("rotation", [0, 90, 180, 270])
+    def test_text_no_crash_on_rotated_page(self, rotation):
+        """회전된 페이지에 텍스트 삽입이 예외 없이 동작해야 합니다."""
+        doc = fitz.open()
+        doc.new_page(width=595, height=842)
+        page = doc[0]
+        page.set_rotation(rotation)
+        add_text(page, 100, 200, "Rotated Text", AnnotationStyle())
+        assert _render_bytes(page)
+        doc.close()
+
+    def test_rotated_page_render_differs_from_nonrotated(self):
+        """/Rotate 90 페이지에 삽입된 텍스트는 회전 보정이 적용되어 방향이 달라야 합니다."""
+        # rotate=0 페이지
+        doc0 = fitz.open()
+        doc0.new_page(width=595, height=842)
+        page0 = doc0[0]
+        add_text(page0, 100, 200, "ABC", AnnotationStyle())
+        render0 = _render_bytes(page0)
+        doc0.close()
+
+        # rotate=90 페이지 (add_text 내부에서 rotate=90 보정 적용)
+        doc90 = fitz.open()
+        doc90.new_page(width=595, height=842)
+        page90 = doc90[0]
+        page90.set_rotation(90)
+        add_text(page90, 100, 200, "ABC", AnnotationStyle())
+        render90 = _render_bytes(page90)
+        doc90.close()
+
+        # 두 렌더링 결과가 다름 (좌표 + 방향 모두 다름)
+        assert render0 != render90
+
+
 # ── 복합 시나리오 ─────────────────────────────────────────────────────────────
 
 class TestCombined:

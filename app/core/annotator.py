@@ -138,7 +138,7 @@ def add_text(
     text: str,
     style: AnnotationStyle,
 ) -> None:
-    """텍스트를 페이지에 삽입합니다. 폰트 패밀리/굵기/기울기를 반영합니다."""
+    """텍스트를 페이지에 삽입합니다. 폰트 패밀리/굵기/기울기, 페이지 회전을 반영합니다."""
     fontname, fontfile = _resolve_font(style)
     kwargs: dict = {
         "point": fitz.Point(x, y),
@@ -146,6 +146,7 @@ def add_text(
         "fontsize": style.font_size,
         "color": style.color,
         "fontname": fontname,
+        "rotate": page.rotation,   # 페이지 /Rotate 값으로 텍스트 방향 보정
     }
     if fontfile:
         kwargs["fontfile"] = fontfile

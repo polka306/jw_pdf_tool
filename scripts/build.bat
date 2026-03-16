@@ -8,7 +8,7 @@ SET ROOT=%~dp0..
 echo [1/2] Running PyInstaller...
 
 if exist "%ROOT%\.venv\Scripts\pyinstaller.exe" (
-    "%ROOT%\.venv\Scripts\pyinstaller.exe" "%ROOT%\pdf_editor.spec" --clean --noconfirm --distpath "%ROOT%\dist" --workpath "%ROOT%uild" --specpath "%ROOT%"
+    "%ROOT%\.venv\Scripts\pyinstaller.exe" "%ROOT%\pdf_editor.spec" --clean --noconfirm --distpath "%ROOT%\dist" --workpath "%ROOT%\build"
 ) else (
     pyinstaller "%ROOT%\pdf_editor.spec" --clean --noconfirm
 )
