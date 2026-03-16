@@ -39,6 +39,9 @@ class MainToolBar(QToolBar):
     color_changed  = pyqtSignal(tuple)   # (r, g, b) 0.0~1.0
     width_changed  = pyqtSignal(float)
 
+    # 변환
+    convert_requested = pyqtSignal()
+
     def __init__(self, parent=None) -> None:
         super().__init__("메인 툴바", parent)
         self.setMovable(False)
@@ -83,6 +86,12 @@ class MainToolBar(QToolBar):
         self._act_insert.setEnabled(False)
         self._act_insert.triggered.connect(self.insert_page_requested)
         self.addAction(self._act_insert)
+
+        self._act_convert = QAction("변환", self)
+        self._act_convert.setShortcut(QKeySequence("Ctrl+Shift+C"))
+        self._act_convert.setToolTip("이미지/문서를 PDF로 변환 (Ctrl+Shift+C)")
+        self._act_convert.triggered.connect(self.convert_requested)
+        self.addAction(self._act_convert)
 
         self.addSeparator()
 

@@ -108,5 +108,5 @@
 - [x] Phase 1 — 기반: PDF 열기 + 렌더링 + 기본 MainWindow
 - [x] Phase 2 — 페이지 편집: 썸네일, 순서변경, 추출/삽입/삭제
 - [x] Phase 3 — 어노테이션: 텍스트/사각형/타원/선 그리기
-- [ ] Phase 4 — 변환: 이미지→PDF, LibreOffice 연동
+- [x] Phase 4 — 변환: 이미지→PDF, LibreOffice 연동
 - [ ] Phase 5 — 마무리: Undo/Redo, 단축키, exe 패키징

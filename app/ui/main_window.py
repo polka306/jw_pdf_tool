@@ -93,6 +93,11 @@ class MainWindow(QMainWindow):
         for tool, act in self._toolbar._tool_actions.items():
             annot_menu.addAction(act)
 
+        tools_menu = menu_bar.addMenu("도구(&T)")
+        act_convert = tools_menu.addAction("변환...(&C)")
+        act_convert.setShortcut("Ctrl+Shift+C")
+        act_convert.triggered.connect(self._open_convert_dialog)
+
     # ── 시그널 연결 ───────────────────────────────────────────────────────────
 
     def _connect_signals(self) -> None:
@@ -123,6 +128,9 @@ class MainWindow(QMainWindow):
         self._toolbar.color_changed.connect(self._on_color_changed)
         self._toolbar.width_changed.connect(self._on_width_changed)
         self._viewer.annotation_added.connect(self._on_annotation_added)
+
+        # 변환
+        self._toolbar.convert_requested.connect(self._open_convert_dialog)
 
     # ── 파일 작업 ─────────────────────────────────────────────────────────────
 
@@ -285,6 +293,34 @@ class MainWindow(QMainWindow):
         self._status_bar.showMessage("어노테이션 추가됨 — 저장하려면 Ctrl+S", 3000)
         # 현재 페이지 썸네일만 갱신 (전체 재렌더 불필요)
         self._page_panel.reload_page(self._viewer.current_page)
+
+    # ── 변환 ─────────────────────────────────────────────────────────────────
+
+    def _open_convert_dialog(self) -> None:
+        from app.ui.dialogs.convert_dialog import ConvertDialog
+        dlg = ConvertDialog(self)
+        dlg.conversion_done.connect(self._open_converted_pdf)
+        dlg.exec()
+
+    def _open_converted_pdf(self, output_paths: list) -> None:
+        """변환 완료 후 결과 PDF를 뷰어에서 엽니다."""
+        if not output_paths:
+            return
+        path = output_paths[0]
+        try:
+            self._doc.open(path)
+        except Exception as exc:
+            QMessageBox.critical(self, "오류", f"변환된 파일을 열 수 없습니다:\n{exc}")
+            return
+        self._page_panel.load_document(self._doc)
+        self._viewer.set_document(self._doc)
+        self._toolbar.set_document_loaded(True)
+        self._toolbar.set_tool_checked(AnnotationTool.SELECT)
+        self._update_title(path)
+        self._update_page_status(0)
+        self._toolbar.update_zoom_display(self._viewer.zoom)
+        self._lbl_file.setText(os.path.basename(path))
+        self._sync_annot_style()
 
     def _sync_annot_style(self) -> None:
         """툴바의 현재 색상/굵기를 뷰어 스타일에 동기화합니다."""

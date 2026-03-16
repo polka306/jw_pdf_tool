@@ -4,6 +4,31 @@
 
 ---
 
+## [Phase 4] 2026-03-16 — 문서 변환 (이미지/Office → PDF)
+
+### 추가
+- `app/core/converter.py` — 변환 로직
+  - `convert_images_to_pdf()`: PyMuPDF로 이미지(JPG/PNG/BMP/GIF/TIFF/WEBP) → PDF
+  - `convert_office_to_pdf()`: LibreOffice CLI로 Office 문서 → PDF
+  - `find_libreoffice()`: 환경 변수 → 표준 경로 → glob → PATH 순으로 탐지
+  - Windows `CREATE_NO_WINDOW` 플래그로 콘솔 팝업 방지
+- `app/ui/dialogs/convert_dialog.py` — 변환 다이얼로그
+  - 이미지/Office 탭 구분, 파일 추가/제거/순서 변경
+  - `_ConvertWorker(QObject)` + `QThread` 백그라운드 변환
+  - LibreOffice 미설치 시 탭 내 상태 표시 및 비활성화
+  - 변환 완료 후 "지금 열겠습니까?" 옵션
+- `tests/core/test_converter.py` — 20개 단위 테스트 (전체 통과)
+
+### 수정
+- `app/ui/toolbar.py` — "변환" 버튼 및 `convert_requested` 시그널 추가 (Ctrl+Shift+C)
+- `app/ui/main_window.py` — 도구(&T) 메뉴 추가, `_open_convert_dialog()` / `_open_converted_pdf()` 연결
+
+### 비고
+- 자동 테스트 91/91 PASS
+- LibreOffice 미설치 환경에서도 이미지→PDF 기능은 정상 동작
+
+---
+
 ## [fix] 2026-03-16 — 페이지 삽입 다이얼로그 썸네일 크기 수정
 
 ### 수정

@@ -171,10 +171,51 @@
 
 ---
 
+## Phase 4 — 문서 변환 (이미지/Office → PDF)
+
+### 자동화 테스트 (20개)
+
+| ID | 유형 | 시나리오 | 기대 결과 | 상태 |
+|----|------|----------|-----------|------|
+| P4-01 | [AUTO] | 단일 PNG → PDF | 파일 생성, 크기 > 0 | ✅ PASS |
+| P4-02 | [AUTO] | 반환값 = output_path | convert_images_to_pdf 반환값 확인 | ✅ PASS |
+| P4-03 | [AUTO] | 단일 이미지 페이지 수 = 1 | fitz로 열어 len(doc)==1 | ✅ PASS |
+| P4-04 | [AUTO] | 이미지 3개 → 3페이지 PDF | len(doc)==3 | ✅ PASS |
+| P4-05 | [AUTO] | JPG 변환 | 파일 생성 확인 | ✅ PASS |
+| P4-06 | [AUTO] | 빈 목록 → ValueError | "이미지" 포함 메시지 | ✅ PASS |
+| P4-07 | [AUTO] | 존재하지 않는 파일 → 예외 | FileNotFoundError or RuntimeError | ✅ PASS |
+| P4-08 | [AUTO] | 두 이미지 순서 보존 | 2페이지 PDF | ✅ PASS |
+| P4-09 | [AUTO] | SUPPORTED_IMAGE_EXTS에 .jpg/.jpeg | frozenset 포함 확인 | ✅ PASS |
+| P4-10 | [AUTO] | SUPPORTED_IMAGE_EXTS에 .png | frozenset 포함 확인 | ✅ PASS |
+| P4-11 | [AUTO] | SUPPORTED_OFFICE_EXTS에 .docx | frozenset 포함 확인 | ✅ PASS |
+| P4-12 | [AUTO] | SUPPORTED_OFFICE_EXTS에 .pptx | frozenset 포함 확인 | ✅ PASS |
+| P4-13 | [AUTO] | find_libreoffice → str or None | 타입 확인 | ✅ PASS |
+| P4-14 | [AUTO] | is_libreoffice_available → bool | 타입 확인 | ✅ PASS |
+| P4-15 | [AUTO] | LIBREOFFICE_PATH 환경 변수 우선 | 설정한 경로 반환 | ✅ PASS |
+| P4-16 | [AUTO] | 존재하지 않는 LIBREOFFICE_PATH 무시 | 다른 경로로 탐지 | ✅ PASS |
+| P4-17 | [AUTO] | LibreOffice 없으면 RuntimeError | "LibreOffice" 포함 메시지 | ✅ PASS |
+| P4-18 | [AUTO] | subprocess 실패 → RuntimeError | "변환 실패" 포함 메시지 | ✅ PASS |
+| P4-19 | [AUTO] | 출력 파일 없으면 RuntimeError | "찾을 수 없습니다" 포함 메시지 | ✅ PASS |
+| P4-20 | [AUTO] | 성공 시 올바른 경로 반환 | expected_out == result | ✅ PASS |
+
+### 수동 테스트
+
+| ID | 유형 | 시나리오 | 기대 결과 | 상태 |
+|----|------|----------|-----------|------|
+| P4-M01 | [MANUAL] | 변환 다이얼로그 열기 | 도구 메뉴 또는 툴바 "변환" 클릭 → 다이얼로그 표시 | ⏳ |
+| P4-M02 | [MANUAL] | 이미지 → PDF 변환 | PNG/JPG 추가 → 저장 위치 지정 → 변환 → PDF 생성 | ⏳ |
+| P4-M03 | [MANUAL] | 변환 후 열기 | "지금 열겠습니까?" → Yes → 뷰어에 PDF 로드 | ⏳ |
+| P4-M04 | [MANUAL] | 이미지 순서 변경 | ▲▼ 버튼으로 순서 변경 → 변환 → PDF 페이지 순서 일치 | ⏳ |
+| P4-M05 | [MANUAL] | LibreOffice 탭 상태 | LibreOffice 미설치 시 빨간 경고 표시 및 비활성화 | ⏳ |
+| P4-M06 | [MANUAL] | 변환 중 진행 표시 | 변환 시작 → 진행 바 표시 → 완료 시 사라짐 | ⏳ |
+
+---
+
 ## 통합 실행 결과 (최신)
 
 | 날짜 | pytest 결과 | 수동 테스트 | 비고 |
 |------|------------|------------|------|
+| 2026-03-16 | 91/91 PASS (5.78s) | Phase 0~4 자동 테스트 PASS | Phase 4 완료 시점 |
 | 2026-03-16 | 71/71 PASS (5.96s) | Phase 0~3 전체 PASS | Phase 3 완료 시점 |
 | 2026-03-16 | 47/47 PASS (4.75s) | Phase 0~2 전체 PASS | Phase 2 완료 시점 |
 
