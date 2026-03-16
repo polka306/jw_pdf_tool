@@ -1,30 +1,23 @@
 @echo off
-chcp 65001 > nul
 echo ============================================================
 echo  PDF Editor - exe build
 echo ============================================================
-echo.
 
-cd /d "%~dp0.."
+SET ROOT=%~dp0..
 
 echo [1/2] Running PyInstaller...
 
-if exist ".venv\Scripts\pyinstaller.exe" (
-    .venv\Scripts\pyinstaller.exe pdf_editor.spec --clean --noconfirm
+if exist "%ROOT%\.venv\Scripts\pyinstaller.exe" (
+    "%ROOT%\.venv\Scripts\pyinstaller.exe" "%ROOT%\pdf_editor.spec" --clean --noconfirm --distpath "%ROOT%\dist" --workpath "%ROOT%uild" --specpath "%ROOT%"
 ) else (
-    pyinstaller pdf_editor.spec --clean --noconfirm
+    pyinstaller "%ROOT%\pdf_editor.spec" --clean --noconfirm
 )
 
 if errorlevel 1 (
-    echo.
-    echo [ERROR] Build failed. Check the log above.
-    pause
+    echo [ERROR] Build failed.
     exit /b 1
 )
 
-echo.
-echo [2/2] Done!
-echo.
-echo Output: dist\PDF편집툴.exe
-echo.
-pause
+echo [2/2] Build complete!
+echo Output: %ROOT%\dist\PDF_Editor.exe
+
