@@ -4,6 +4,13 @@
 
 ---
 
+## [fix] 2026-03-16 — 드래그앤드롭 PyQt6 호환성 수정
+
+### 수정
+- `app/ui/page_panel.py`: `QDropEvent.pos()` → `event.position().toPoint()` (PyQt6에서 `pos()` 제거됨)
+
+---
+
 ## [Phase 3] 2026-03-16 — 어노테이션 (텍스트/사각형/타원/선)
 
 ### 추가

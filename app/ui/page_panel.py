@@ -41,8 +41,9 @@ class _DraggableList(QListWidget):
         super().mousePressEvent(event)
 
     def dropEvent(self, event) -> None:
-        # drop 위치 계산 (super() 호출 전에 해야 정확)
-        target_item = self.itemAt(event.pos())
+        # PyQt6: QDropEvent.pos() 제거됨 → position().toPoint() 사용
+        pos = event.position().toPoint()
+        target_item = self.itemAt(pos)
         drop_row = self.row(target_item) if target_item else self.count() - 1
 
         from_row = self._drag_row
