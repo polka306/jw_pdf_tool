@@ -4,6 +4,19 @@
 
 ---
 
+## [Phase 2] 2026-03-16 — 페이지 편집 (순서변경/삭제/추출/삽입)
+
+### 추가
+- `app/core/page_editor.py` — 페이지 편집 로직 (move/delete/extract/insert, PyMuPDF 사용)
+- `app/ui/dialogs/insert_dialog.py` — 다른 PDF에서 페이지 선택 삽입 다이얼로그
+
+### 수정
+- `app/ui/page_panel.py` — 드래그앤드롭 순서변경, 다중선택(Ctrl/Shift), 우클릭 컨텍스트 메뉴 추가
+- `app/ui/toolbar.py` — 페이지 삭제/추출/삽입 버튼 및 단축키(Delete) 추가
+- `app/ui/main_window.py` — 페이지 편집 기능 전체 연결, 편집 메뉴 추가, 편집 후 UI 갱신 로직
+
+---
+
 ## [Phase 1] 2026-03-16 — 기반 구현 (PDF 열기 + 렌더링 + 기본 MainWindow)
 
 ### 추가

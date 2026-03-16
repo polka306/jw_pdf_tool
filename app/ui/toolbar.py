@@ -11,6 +11,7 @@ class MainToolBar(QToolBar):
     """메인 윈도우 툴바.
 
     Phase 1: 파일 열기/저장, 줌 컨트롤
+    Phase 2: 페이지 삭제/추출/삽입
     Phase 3에서 어노테이션 도구 버튼 추가 예정.
     """
 
@@ -22,7 +23,12 @@ class MainToolBar(QToolBar):
     zoom_in_requested = pyqtSignal()
     zoom_out_requested = pyqtSignal()
     zoom_fit_requested = pyqtSignal()
-    zoom_value_changed = pyqtSignal(float)  # 스핀박스 직접 입력
+    zoom_value_changed = pyqtSignal(float)
+
+    # 페이지 편집
+    delete_page_requested = pyqtSignal()
+    extract_page_requested = pyqtSignal()
+    insert_page_requested = pyqtSignal()
 
     def __init__(self, parent=None) -> None:
         super().__init__("메인 툴바", parent)
@@ -47,6 +53,28 @@ class MainToolBar(QToolBar):
         self._act_save.setEnabled(False)
         self._act_save.triggered.connect(self.save_requested)
         self.addAction(self._act_save)
+
+        self.addSeparator()
+
+        # --- 페이지 편집 그룹 ---
+        self._act_delete = QAction("페이지 삭제", self)
+        self._act_delete.setShortcut(QKeySequence("Delete"))
+        self._act_delete.setToolTip("선택한 페이지 삭제 (Delete)")
+        self._act_delete.setEnabled(False)
+        self._act_delete.triggered.connect(self.delete_page_requested)
+        self.addAction(self._act_delete)
+
+        self._act_extract = QAction("페이지 추출", self)
+        self._act_extract.setToolTip("선택한 페이지를 새 PDF로 추출")
+        self._act_extract.setEnabled(False)
+        self._act_extract.triggered.connect(self.extract_page_requested)
+        self.addAction(self._act_extract)
+
+        self._act_insert = QAction("페이지 삽입", self)
+        self._act_insert.setToolTip("다른 PDF에서 페이지 삽입")
+        self._act_insert.setEnabled(False)
+        self._act_insert.triggered.connect(self.insert_page_requested)
+        self.addAction(self._act_insert)
 
         self.addSeparator()
 
@@ -85,7 +113,6 @@ class MainToolBar(QToolBar):
         self._act_zoom_fit.triggered.connect(self.zoom_fit_requested)
         self.addAction(self._act_zoom_fit)
 
-        # 오른쪽 여백
         spacer = QWidget()
         spacer.setFixedWidth(8)
         self.addWidget(spacer)
@@ -97,6 +124,9 @@ class MainToolBar(QToolBar):
     def set_document_loaded(self, loaded: bool) -> None:
         """문서 로드 여부에 따라 액션 활성/비활성."""
         self._act_save.setEnabled(loaded)
+        self._act_delete.setEnabled(loaded)
+        self._act_extract.setEnabled(loaded)
+        self._act_insert.setEnabled(loaded)
         self._act_zoom_in.setEnabled(loaded)
         self._act_zoom_out.setEnabled(loaded)
         self._act_zoom_fit.setEnabled(loaded)
