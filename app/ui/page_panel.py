@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QModelIndex, QSize, Qt, pyqtSignal
+from PyQt6.QtCore import QModelIndex, QSize, Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QAction, QIcon, QImage, QPixmap
 from PyQt6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -19,6 +20,47 @@ from app.core.pdf_document import PdfDocument
 
 THUMB_WIDTH = 120
 
+
+# ── 백그라운드 썸네일 로더 ─────────────────────────────────────────────────────
+
+class _ThumbnailLoader(QThread):
+    """파일을 독립적으로 열어 썸네일을 백그라운드에서 순차 생성합니다.
+
+    메인 스레드의 PdfDocument와 별도 fitz.Document를 사용하므로 스레드 안전.
+    """
+
+    thumbnail_ready = pyqtSignal(int, bytes)   # (page_idx, png_bytes)
+
+    def __init__(self, path: str, page_count: int, thumb_width: int, parent=None):
+        super().__init__(parent)
+        self._path = path
+        self._page_count = page_count
+        self._thumb_width = thumb_width
+        self._cancelled = False
+
+    def cancel(self) -> None:
+        self._cancelled = True
+
+    def run(self) -> None:
+        import fitz
+        try:
+            doc = fitz.open(self._path)
+        except Exception:
+            return
+        for i in range(self._page_count):
+            if self._cancelled:
+                break
+            try:
+                page = doc[i]
+                zoom = self._thumb_width / page.rect.width
+                pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+                self.thumbnail_ready.emit(i, pix.tobytes("png"))
+            except Exception:
+                pass
+        doc.close()
+
+
+# ── 드래그앤드롭 리스트 ────────────────────────────────────────────────────────
 
 class _DraggableList(QListWidget):
     """드래그앤드롭으로 페이지 순서를 변경할 수 있는 리스트 위젯.
@@ -55,6 +97,8 @@ class _DraggableList(QListWidget):
             self.page_moved.emit(from_row, to_row)
 
 
+# ── 페이지 패널 ────────────────────────────────────────────────────────────────
+
 class PagePanel(QWidget):
     """페이지 썸네일 패널.
 
@@ -75,6 +119,7 @@ class PagePanel(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._doc: PdfDocument | None = None
+        self._loader: _ThumbnailLoader | None = None
         self._setup_ui()
 
     # ------------------------------------------------------------------
@@ -131,25 +176,62 @@ class PagePanel(QWidget):
     # ------------------------------------------------------------------
 
     def load_document(self, doc: PdfDocument) -> None:
-        """문서를 로드하고 모든 썸네일을 생성합니다."""
+        """문서를 로드합니다. 썸네일은 백그라운드에서 순차 생성됩니다."""
         self._doc = doc
-        self.reload_all()
+        self._cancel_loader()
+
+        # placeholder 아이템 즉시 추가 (빠른 응답)
+        self._list.blockSignals(True)
+        self._list.clear()
+        ph_size = QSize(THUMB_WIDTH + 8, int(THUMB_WIDTH * 1.5) + 22)
+        for i in range(doc.page_count):
+            item = QListWidgetItem()
+            item.setText(f"{i + 1}")
+            item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
+            item.setSizeHint(ph_size)
+            self._list.addItem(item)
+        self._list.blockSignals(False)
+        self._list.setCurrentRow(0)
+
+        # 백그라운드 로더 시작
+        if doc.path:
+            self._loader = _ThumbnailLoader(doc.path, doc.page_count, THUMB_WIDTH, self)
+            self._loader.thumbnail_ready.connect(self._on_thumbnail_ready)
+            self._loader.start()
 
     def reload_all(self) -> None:
-        """모든 썸네일을 새로 렌더링합니다."""
+        """모든 썸네일을 새로 렌더링합니다 (페이지 편집 후 사용).
+
+        진행 중인 백그라운드 로더를 취소하고 동기 렌더링합니다.
+        UI 응답성을 위해 각 썸네일 렌더링 후 이벤트를 처리합니다.
+        """
         if self._doc is None:
             return
+        self._cancel_loader()
         current = self._list.currentRow()
         self._list.blockSignals(True)
         self._list.clear()
         for i in range(self._doc.page_count):
             self._list.addItem(self._make_item(i))
+            QApplication.processEvents()  # UI 응답 유지
         self._list.blockSignals(False)
-        # 이전 선택 페이지 유지 (범위 초과 시 마지막 페이지로)
         target = min(current, self._doc.page_count - 1)
         self._list.setCurrentRow(max(0, target))
 
+    def reload_page(self, page_idx: int) -> None:
+        """특정 페이지 썸네일만 갱신합니다 (어노테이션 추가 후 사용)."""
+        if self._doc is None:
+            return
+        item = self._list.item(page_idx)
+        if item is None:
+            return
+        png_bytes = self._doc.render_page_thumbnail(page_idx, thumb_width=THUMB_WIDTH)
+        pixmap = QPixmap.fromImage(QImage.fromData(png_bytes))
+        item.setIcon(QIcon(pixmap))
+        item.setSizeHint(QSize(THUMB_WIDTH + 8, pixmap.height() + 22))
+
     def clear(self) -> None:
+        self._cancel_loader()
         self._doc = None
         self._list.clear()
 
@@ -167,6 +249,20 @@ class PagePanel(QWidget):
     # 내부 메서드
     # ------------------------------------------------------------------
 
+    def _cancel_loader(self) -> None:
+        if self._loader is not None:
+            self._loader.cancel()
+            self._loader.wait()
+            self._loader = None
+
+    def _on_thumbnail_ready(self, idx: int, png_bytes: bytes) -> None:
+        item = self._list.item(idx)
+        if item is None:
+            return
+        pixmap = QPixmap.fromImage(QImage.fromData(png_bytes))
+        item.setIcon(QIcon(pixmap))
+        item.setSizeHint(QSize(THUMB_WIDTH + 8, pixmap.height() + 22))
+
     def _make_item(self, page_idx: int) -> QListWidgetItem:
         png_bytes = self._doc.render_page_thumbnail(page_idx, thumb_width=THUMB_WIDTH)
         pixmap = QPixmap.fromImage(QImage.fromData(png_bytes))
@@ -174,7 +270,6 @@ class PagePanel(QWidget):
         item.setIcon(QIcon(pixmap))
         item.setText(f"{page_idx + 1}")
         item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
-        # 실제 픽스맵 크기 기반으로 아이템 높이 설정 (가로/세로 페이지 모두 대응)
         item.setSizeHint(QSize(THUMB_WIDTH + 8, pixmap.height() + 22))
         return item
 

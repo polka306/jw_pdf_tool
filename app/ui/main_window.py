@@ -283,9 +283,8 @@ class MainWindow(QMainWindow):
 
     def _on_annotation_added(self) -> None:
         self._status_bar.showMessage("어노테이션 추가됨 — 저장하려면 Ctrl+S", 3000)
-        # 썸네일 갱신 (어노테이션이 반영된 모습)
-        self._page_panel.reload_all()
-        self._page_panel.set_current_page(self._viewer.current_page)
+        # 현재 페이지 썸네일만 갱신 (전체 재렌더 불필요)
+        self._page_panel.reload_page(self._viewer.current_page)
 
     def _sync_annot_style(self) -> None:
         """툴바의 현재 색상/굵기를 뷰어 스타일에 동기화합니다."""

@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
     QInputDialog,
 )
 
-import fitz  # PyMuPDF — 좌표 역변환용
+import fitz  # PyMuPDF — derotation_matrix용
 
 from app.core.annotator import AnnotationStyle, AnnotationTool
 from app.core.pdf_document import PdfDocument
@@ -199,22 +199,22 @@ class PdfViewer(QGraphicsView):
     # ── 어노테이션 내부 처리 ──────────────────────────────────────────────────
 
     def _scene_to_pdf(self, pt: QPointF) -> tuple[float, float]:
-        """Scene 좌표 → PDF 포인트 좌표 (페이지 rotation 처리 포함).
+        """Scene 좌표 → PyMuPDF 드로잉 좌표 변환.
 
-        get_pixmap(matrix=zoom_mat) 렌더링 시 PyMuPDF는
-        page.transformation_matrix * zoom_mat 를 실제 변환으로 사용합니다.
-        역변환을 적용해 PDF 좌표계로 되돌립니다.
+        get_pixmap(Matrix(zoom,zoom))은 page 회전을 자동 적용한 screen 좌표로
+        렌더링한다.  Shape API(draw_rect/insert_text 등)는 document 좌표계(page
+        rotation 이전 MediaBox 기준, y 아래 방향)를 사용하므로
+        page.derotation_matrix로 screen → document 변환이 필요하다.
+        rotation=0인 페이지에서는 derotation_matrix가 항등행렬이므로
+        단순 /zoom 과 동일하다.
         """
+        screen_x = pt.x() / self._zoom
+        screen_y = pt.y() / self._zoom
         if self._doc is None or not self._doc.is_open:
-            return pt.x() / self._zoom, pt.y() / self._zoom
-
+            return screen_x, screen_y
         page = self._doc.raw[self._current_page]
-        zoom_mat = fitz.Matrix(self._zoom, self._zoom)
-        # 전체 변환: PDF좌표 → 픽셀 = page.transformation_matrix × zoom_mat
-        total_mat = page.transformation_matrix * zoom_mat
-        # 역변환: 픽셀 → PDF좌표
-        pdf_pt = fitz.Point(pt.x(), pt.y()) * ~total_mat
-        return pdf_pt.x, pdf_pt.y
+        doc_pt = fitz.Point(screen_x, screen_y) * page.derotation_matrix
+        return doc_pt.x, doc_pt.y
 
     def _make_pen(self) -> QPen:
         r, g, b = self._annot_style.color

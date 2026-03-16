@@ -4,6 +4,58 @@
 
 ---
 
+## [fix] 2026-03-16 — 페이지 삽입 다이얼로그 썸네일 크기 수정
+
+### 수정
+- `app/ui/dialogs/insert_dialog.py`:
+  - `setIconSize(self._list.iconSize())` → `setIconSize(QSize(THUMB_WIDTH, int(THUMB_WIDTH*1.5)))` 로 수정 (기본값 그대로 세팅하면 16×16으로 고정되는 버그)
+  - `setGridSize(self._list.gridSize())` → `setGridSize(QSize(THUMB_WIDTH+16, int(THUMB_WIDTH*1.5)+28))` 로 수정
+  - `item.setSizeHint(pixmap.size().__class__(...))` → `QSize(THUMB_WIDTH+8, pixmap.height()+22)` 로 정리
+
+---
+
+## [perf] 2026-03-16 — 파일 로드/저장 딜레이 개선 및 줌 UI 수정
+
+### 수정
+- `app/ui/page_panel.py`:
+  - `_ThumbnailLoader(QThread)` 추가 — 파일 열기 시 썸네일을 백그라운드에서 순차 생성, placeholder 즉시 표시
+  - `load_document()`: 백그라운드 로더 사용, 이전 로더 취소 후 재시작
+  - `reload_all()`: `QApplication.processEvents()` 삽입으로 페이지 편집 중 UI 응답 유지
+  - `reload_page(idx)` 추가 — 단일 페이지 썸네일만 갱신 (어노테이션 후 전체 재렌더 불필요)
+  - `clear()`: 로더 취소 포함
+- `app/core/pdf_document.py`:
+  - `save()`: 같은 파일 덮어쓰기 시 `incremental=True` 사용 (변경분만 기록, 수 배 빠름). 실패 시 전체 저장으로 자동 폴백. Save As는 기존 `garbage=4 + deflate` 유지.
+- `app/ui/main_window.py`:
+  - `_on_annotation_added()`: `reload_all()` → `reload_page(current_page)` 로 변경 (30페이지 전체 재렌더 → 1페이지 갱신)
+- `app/ui/toolbar.py`:
+  - 줌 스핀박스 width 72 → 82px (퍼센트 숫자 잘림 현상 수정)
+
+---
+
+## [fix] 2026-03-16 — 어노테이션 좌표 및 툴바 UI 개선
+
+### 수정
+- `app/ui/pdf_viewer.py`:
+  - `_scene_to_pdf()`: `page.derotation_matrix` 적용으로 `/Rotate 90` 페이지 좌표 변환 정확도 개선
+  - rotation=0인 페이지에서는 항등행렬이므로 동작 그대로 유지
+- `app/ui/toolbar.py`:
+  - "페이지 삭제/추출/삽입" 버튼 레이블 → "삭제/추출/삽입" 으로 축약 (툴바 잘림 현상 개선, 툴팁은 유지)
+
+### 계획 추가
+- `PLAN.md`: Phase 4.5 — 텍스트 어노테이션 스타일 확장 (폰트 선택, 글자 크기 조절, 볼드/이탤릭) 항목 추가
+
+---
+
+## [fix] 2026-03-16 — 가로 페이지 어노테이션 좌표 재수정
+
+### 수정
+- `app/ui/pdf_viewer.py`:
+  - `_scene_to_pdf()`: `page.transformation_matrix` 역변환 방식 제거 → `scene / zoom` 단순 나눗셈으로 복원
+  - 근거: `get_pixmap(Matrix(zoom,zoom))`과 Shape API(`draw_rect`/`insert_text` 등)는 동일한 display space(page.rect 기준, top-left 원점, y 아래 방향)를 사용하므로 rotation 여부와 무관하게 `scene / zoom = draw_coord`가 성립함
+  - 이전 `transformation_matrix` 역변환은 PDF user space(bottom-left, y 위 방향)를 반환해 좌표가 더 어긋나던 버그 수정
+
+---
+
 ## [fix] 2026-03-16 — 썸네일 크기 및 가로 페이지 어노테이션 좌표 수정
 
 ### 수정

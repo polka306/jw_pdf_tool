@@ -65,20 +65,20 @@ class MainToolBar(QToolBar):
         self.addSeparator()
 
         # ── 페이지 편집 ───────────────────────────────────────────────────────
-        self._act_delete = QAction("페이지 삭제", self)
+        self._act_delete = QAction("삭제", self)
         self._act_delete.setShortcut(QKeySequence("Delete"))
         self._act_delete.setToolTip("선택한 페이지 삭제 (Delete)")
         self._act_delete.setEnabled(False)
         self._act_delete.triggered.connect(self.delete_page_requested)
         self.addAction(self._act_delete)
 
-        self._act_extract = QAction("페이지 추출", self)
+        self._act_extract = QAction("추출", self)
         self._act_extract.setToolTip("선택한 페이지를 새 PDF로 추출")
         self._act_extract.setEnabled(False)
         self._act_extract.triggered.connect(self.extract_page_requested)
         self.addAction(self._act_extract)
 
-        self._act_insert = QAction("페이지 삽입", self)
+        self._act_insert = QAction("삽입", self)
         self._act_insert.setToolTip("다른 PDF에서 페이지 삽입")
         self._act_insert.setEnabled(False)
         self._act_insert.triggered.connect(self.insert_page_requested)
@@ -152,7 +152,7 @@ class MainToolBar(QToolBar):
         self._zoom_spin.setRange(25, 400)
         self._zoom_spin.setValue(150)
         self._zoom_spin.setSuffix("%")
-        self._zoom_spin.setFixedWidth(72)
+        self._zoom_spin.setFixedWidth(82)
         self._zoom_spin.setEnabled(False)
         self._zoom_spin.valueChanged.connect(lambda v: self.zoom_value_changed.emit(v / 100.0))
         self.addWidget(self._zoom_spin)

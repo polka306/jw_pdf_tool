@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSize
 from PyQt6.QtGui import QIcon, QImage, QPixmap
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -68,10 +69,10 @@ class InsertDialog(QDialog):
         self._list = QListWidget()
         self._list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._list.setViewMode(QListWidget.ViewMode.IconMode)
-        self._list.setIconSize(self._list.iconSize())
+        self._list.setIconSize(QSize(THUMB_WIDTH, int(THUMB_WIDTH * 1.5)))
+        self._list.setGridSize(QSize(THUMB_WIDTH + 16, int(THUMB_WIDTH * 1.5) + 28))
         self._list.setResizeMode(QListWidget.ResizeMode.Adjust)
-        self._list.setGridSize(self._list.gridSize())
-        self._list.setSpacing(6)
+        self._list.setSpacing(4)
         self._list.setStyleSheet(
             """
             QListWidget { background:#1e1e1e; border:1px solid #444; }
@@ -145,7 +146,7 @@ class InsertDialog(QDialog):
         item.setIcon(QIcon(pixmap))
         item.setText(f"p.{page_idx + 1}")
         item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
-        item.setSizeHint(pixmap.size().__class__(THUMB_WIDTH + 8, int(THUMB_WIDTH * 1.4) + 20))
+        item.setSizeHint(QSize(THUMB_WIDTH + 8, pixmap.height() + 22))
         return item
 
     def _on_selection_changed(self) -> None:

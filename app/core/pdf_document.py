@@ -83,11 +83,26 @@ class PdfDocument:
     # ------------------------------------------------------------------
 
     def save(self, path: str | None = None) -> None:
-        """저장합니다. path 미지정 시 원본 파일을 덮어씁니다."""
+        """저장합니다. path 미지정 시 원본 파일을 덮어씁니다.
+
+        같은 파일 덮어쓰기: incremental save (변경분만 기록, 빠름).
+        다른 경로(Save As): garbage=4 + deflate 전체 저장 (느리지만 최적화됨).
+        """
         self._require_open()
         save_path = path or self._path
         if save_path is None:
             raise ValueError("저장 경로가 지정되지 않았습니다.")
+        if path is None:
+            # 같은 파일 덮어쓰기 → incremental (빠름)
+            try:
+                self._doc.save(
+                    save_path,
+                    incremental=True,
+                    encryption=fitz.PDF_ENCRYPT_KEEP,
+                )
+                return
+            except Exception:
+                pass  # incremental 불가 시 전체 저장으로 폴백
         self._doc.save(save_path, garbage=4, deflate=True)
         if path:
             self._path = path
