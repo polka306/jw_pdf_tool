@@ -172,6 +172,10 @@ class MainWindow(QMainWindow):
         self._toolbar.tool_changed.connect(self._on_tool_changed)
         self._toolbar.color_changed.connect(self._on_color_changed)
         self._toolbar.width_changed.connect(self._on_width_changed)
+        self._toolbar.text_font_changed.connect(self._on_text_font_changed)
+        self._toolbar.text_size_changed.connect(self._on_text_size_changed)
+        self._toolbar.text_bold_changed.connect(self._on_text_bold_changed)
+        self._toolbar.text_italic_changed.connect(self._on_text_italic_changed)
         self._viewer.annotation_requested.connect(self._on_annotation_requested)
 
         # 변환
@@ -319,6 +323,7 @@ class MainWindow(QMainWindow):
 
     def _on_tool_changed(self, tool: AnnotationTool) -> None:
         self._viewer.set_tool(tool)
+        self._toolbar.set_text_tool_active(tool == AnnotationTool.TEXT)
         tool_names = {
             AnnotationTool.SELECT:  "선택",
             AnnotationTool.TEXT:    "텍스트",
@@ -336,6 +341,26 @@ class MainWindow(QMainWindow):
     def _on_width_changed(self, width: float) -> None:
         style = self._viewer.annotation_style
         style.line_width = width
+        self._viewer.set_annotation_style(style)
+
+    def _on_text_font_changed(self, family: str) -> None:
+        style = self._viewer.annotation_style
+        style.font_family = family
+        self._viewer.set_annotation_style(style)
+
+    def _on_text_size_changed(self, size: float) -> None:
+        style = self._viewer.annotation_style
+        style.font_size = size
+        self._viewer.set_annotation_style(style)
+
+    def _on_text_bold_changed(self, bold: bool) -> None:
+        style = self._viewer.annotation_style
+        style.bold = bold
+        self._viewer.set_annotation_style(style)
+
+    def _on_text_italic_changed(self, italic: bool) -> None:
+        style = self._viewer.annotation_style
+        style.italic = italic
         self._viewer.set_annotation_style(style)
 
     def _on_annotation_requested(self, annotate_fn, description: str) -> None:
@@ -415,10 +440,14 @@ class MainWindow(QMainWindow):
         self._sync_annot_style()
 
     def _sync_annot_style(self) -> None:
-        """툴바의 현재 색상/굵기를 뷰어 스타일에 동기화합니다."""
+        """툴바의 현재 색상/굵기/텍스트 스타일을 뷰어 스타일에 동기화합니다."""
         style = AnnotationStyle(
             color=self._toolbar.current_annot_color,
             line_width=self._toolbar.current_annot_width,
+            font_size=self._toolbar.current_font_size,
+            font_family=self._toolbar.current_font_family,
+            bold=self._toolbar.current_bold,
+            italic=self._toolbar.current_italic,
         )
         self._viewer.set_annotation_style(style)
 

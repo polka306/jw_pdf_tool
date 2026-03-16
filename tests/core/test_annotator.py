@@ -5,7 +5,15 @@ from __future__ import annotations
 import fitz
 import pytest
 
-from app.core.annotator import AnnotationStyle, AnnotationTool, add_ellipse, add_line, add_rect, add_text
+from app.core.annotator import (
+    AnnotationStyle,
+    AnnotationTool,
+    _resolve_font,
+    add_ellipse,
+    add_line,
+    add_rect,
+    add_text,
+)
 
 
 @pytest.fixture
@@ -36,6 +44,74 @@ class TestAnnotationStyle:
         assert s.color == (0, 0, 1)
         assert s.line_width == 5.0
         assert s.font_size == 20.0
+
+    def test_default_font_family_is_helv(self):
+        assert AnnotationStyle().font_family == "helv"
+
+    def test_default_bold_italic_false(self):
+        s = AnnotationStyle()
+        assert s.bold is False
+        assert s.italic is False
+
+
+# ── _resolve_font ─────────────────────────────────────────────────────────────
+
+class TestResolveFont:
+    def test_helv_regular(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="helv"))
+        assert name == "Helvetica"
+        assert file is None
+
+    def test_helv_bold(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="helv", bold=True))
+        assert name == "Helvetica-Bold"
+        assert file is None
+
+    def test_helv_italic(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="helv", italic=True))
+        assert name == "Helvetica-Oblique"
+        assert file is None
+
+    def test_helv_bold_italic(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="helv", bold=True, italic=True))
+        assert name == "Helvetica-BoldOblique"
+        assert file is None
+
+    def test_tiro_regular(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="tiro"))
+        assert name == "Times-Roman"
+        assert file is None
+
+    def test_tiro_bold(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="tiro", bold=True))
+        assert name == "Times-Bold"
+        assert file is None
+
+    def test_tiro_italic(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="tiro", italic=True))
+        assert name == "Times-Italic"
+        assert file is None
+
+    def test_tiro_bold_italic(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="tiro", bold=True, italic=True))
+        assert name == "Times-BoldItalic"
+        assert file is None
+
+    def test_cour_regular(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="cour"))
+        assert name == "Courier"
+        assert file is None
+
+    def test_unknown_family_falls_back_to_helv(self):
+        name, file = _resolve_font(AnnotationStyle(font_family="unknown"))
+        assert name == "Helvetica"
+        assert file is None
+
+    def test_korean_returns_path_or_helv_fallback(self):
+        """한글 폰트가 없으면 Helvetica로 폴백합니다."""
+        name, file = _resolve_font(AnnotationStyle(font_family="korean"))
+        # 폰트 파일이 있으면 경로, 없으면 Helvetica 폴백
+        assert name in ("KoreanFont", "KoreanBold", "Helvetica")
 
 
 # ── AnnotationTool 열거형 ─────────────────────────────────────────────────────
@@ -171,6 +247,53 @@ class TestAddText:
         add_text(page, 100, 200, "Blue", AnnotationStyle(color=(0.0, 0.0, 1.0)))
         after = _render_bytes(page)
         assert before != after
+
+
+# ── add_text — 스타일 변형 ────────────────────────────────────────────────────
+
+class TestAddTextStyled:
+    def test_helv_bold(self, blank_page):
+        page, _ = blank_page
+        add_text(page, 100, 200, "Bold Text", AnnotationStyle(font_family="helv", bold=True))
+        assert _render_bytes(page)
+
+    def test_helv_italic(self, blank_page):
+        page, _ = blank_page
+        add_text(page, 100, 200, "Italic", AnnotationStyle(font_family="helv", italic=True))
+        assert _render_bytes(page)
+
+    def test_helv_bold_italic(self, blank_page):
+        page, _ = blank_page
+        add_text(page, 100, 200, "BoldItalic", AnnotationStyle(font_family="helv", bold=True, italic=True))
+        assert _render_bytes(page)
+
+    def test_times_roman(self, blank_page):
+        page, _ = blank_page
+        add_text(page, 100, 200, "Times", AnnotationStyle(font_family="tiro"))
+        assert _render_bytes(page)
+
+    def test_courier(self, blank_page):
+        page, _ = blank_page
+        add_text(page, 100, 200, "Courier", AnnotationStyle(font_family="cour"))
+        assert _render_bytes(page)
+
+    def test_bold_produces_different_render(self, blank_page):
+        """Bold 텍스트와 Regular 텍스트는 렌더링이 달라야 합니다."""
+        page, _ = blank_page
+        add_text(page, 100, 200, "Sample", AnnotationStyle(font_family="helv"))
+        regular_render = _render_bytes(page)
+
+        page2, _ = blank_page
+        add_text(page2, 100, 200, "Sample", AnnotationStyle(font_family="helv", bold=True))
+        bold_render = _render_bytes(page2)
+
+        assert regular_render != bold_render
+
+    def test_korean_style_no_crash(self, blank_page):
+        """한글 폰트 스타일이 예외 없이 동작해야 합니다 (폰트 유무 무관)."""
+        page, _ = blank_page
+        add_text(page, 100, 200, "Korean Style", AnnotationStyle(font_family="korean"))
+        assert _render_bytes(page)
 
 
 # ── 복합 시나리오 ─────────────────────────────────────────────────────────────

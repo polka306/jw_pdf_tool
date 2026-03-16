@@ -249,6 +249,10 @@ class PagePanel(QWidget):
     # 내부 메서드
     # ------------------------------------------------------------------
 
+    def closeEvent(self, event) -> None:
+        self._cancel_loader()
+        super().closeEvent(event)
+
     def _cancel_loader(self) -> None:
         if self._loader is not None:
             self._loader.cancel()

@@ -6,6 +6,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QAction, QActionGroup, QColor, QIcon, QKeySequence, QPixmap
 from PyQt6.QtWidgets import (
     QColorDialog,
+    QComboBox,
     QDoubleSpinBox,
     QLabel,
     QSpinBox,
@@ -38,6 +39,12 @@ class MainToolBar(QToolBar):
     tool_changed   = pyqtSignal(AnnotationTool)
     color_changed  = pyqtSignal(tuple)   # (r, g, b) 0.0~1.0
     width_changed  = pyqtSignal(float)
+
+    # 텍스트 스타일 (TEXT 도구 전용)
+    text_font_changed   = pyqtSignal(str)    # font_family key
+    text_size_changed   = pyqtSignal(float)  # font size pt
+    text_bold_changed   = pyqtSignal(bool)
+    text_italic_changed = pyqtSignal(bool)
 
     # 변환
     convert_requested = pyqtSignal()
@@ -147,6 +154,56 @@ class MainToolBar(QToolBar):
 
         self.addSeparator()
 
+        # ── 텍스트 스타일 (TEXT 도구 활성 시에만 활성화) ──────────────────────
+        self.addWidget(QLabel("  폰트:"))
+        self._font_combo = QComboBox()
+        self._font_combo.setFixedWidth(90)
+        self._font_combo.setToolTip("폰트 패밀리")
+        self._font_combo.addItem("Helvetica", "helv")
+        self._font_combo.addItem("Times",     "tiro")
+        self._font_combo.addItem("Courier",   "cour")
+        self._font_combo.addItem("한글",       "korean")
+        self._font_combo.setEnabled(False)
+        self._font_combo.currentIndexChanged.connect(
+            lambda _: self.text_font_changed.emit(self._font_combo.currentData())
+        )
+        self.addWidget(self._font_combo)
+
+        self.addWidget(QLabel("  크기:"))
+        self._font_size_spin = QSpinBox()
+        self._font_size_spin.setRange(6, 72)
+        self._font_size_spin.setValue(14)
+        self._font_size_spin.setSuffix("pt")
+        self._font_size_spin.setFixedWidth(62)
+        self._font_size_spin.setEnabled(False)
+        self._font_size_spin.valueChanged.connect(
+            lambda v: self.text_size_changed.emit(float(v))
+        )
+        self.addWidget(self._font_size_spin)
+
+        self._act_bold = QAction("B", self)
+        self._act_bold.setToolTip("굵게 (Bold)")
+        self._act_bold.setCheckable(True)
+        self._act_bold.setEnabled(False)
+        self._act_bold.setFont(
+            self._act_bold.font().__class__(self._act_bold.font().family(), -1, 75)  # weight=Bold
+        )
+        self._act_bold.toggled.connect(self.text_bold_changed)
+        self.addAction(self._act_bold)
+
+        self._act_italic = QAction("I", self)
+        self._act_italic.setToolTip("기울임 (Italic)")
+        self._act_italic.setCheckable(True)
+        self._act_italic.setEnabled(False)
+        self._act_italic.toggled.connect(self.text_italic_changed)
+        self.addAction(self._act_italic)
+
+        # 텍스트 스타일 위젯 모음 (활성화 토글용)
+        self._text_style_widgets = [self._font_combo, self._font_size_spin]
+        self._text_style_actions = [self._act_bold, self._act_italic]
+
+        self.addSeparator()
+
         # ── 줌 ────────────────────────────────────────────────────────────────
         self.addWidget(QLabel("  줌:"))
 
@@ -197,6 +254,16 @@ class MainToolBar(QToolBar):
         self._width_spin.setEnabled(loaded)
         for act in self._tool_actions.values():
             act.setEnabled(loaded)
+        # 텍스트 스타일은 TEXT 도구 활성 시에만 켬
+        if not loaded:
+            self.set_text_tool_active(False)
+
+    def set_text_tool_active(self, active: bool) -> None:
+        """TEXT 도구 선택 여부에 따라 텍스트 스타일 컨트롤 활성화합니다."""
+        for w in self._text_style_widgets:
+            w.setEnabled(active)
+        for a in self._text_style_actions:
+            a.setEnabled(active)
 
     def update_zoom_display(self, zoom: float) -> None:
         self._zoom_spin.blockSignals(True)
@@ -240,3 +307,19 @@ class MainToolBar(QToolBar):
     @property
     def current_annot_width(self) -> float:
         return self._width_spin.value()
+
+    @property
+    def current_font_family(self) -> str:
+        return self._font_combo.currentData() or "helv"
+
+    @property
+    def current_font_size(self) -> float:
+        return float(self._font_size_spin.value())
+
+    @property
+    def current_bold(self) -> bool:
+        return self._act_bold.isChecked()
+
+    @property
+    def current_italic(self) -> bool:
+        return self._act_italic.isChecked()

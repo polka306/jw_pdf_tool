@@ -4,6 +4,36 @@
 
 ---
 
+## [Phase 4.5] 2026-03-16 — 텍스트 어노테이션 스타일 확장
+
+### 추가
+- `app/core/annotator.py`:
+  - `AnnotationStyle`에 `font_family`, `bold`, `italic` 필드 추가
+  - `_FONT_MAP`: Base-14 폰트 (Helvetica/Times/Courier) 변형 매핑
+  - `_KOREAN_BOLD_PATH`: 맑은 고딕 볼드 경로
+  - `_resolve_font(style)`: 스타일에서 `(fontname, fontfile)` 결정 함수
+  - `add_text()`: `_resolve_font()` 적용 — 폰트 패밀리/굵기/기울기 반영
+- `app/ui/toolbar.py`:
+  - 텍스트 스타일 컨트롤 추가: 폰트 패밀리 콤보, 크기 스핀박스, Bold/Italic 토글
+  - 시그널: `text_font_changed`, `text_size_changed`, `text_bold_changed`, `text_italic_changed`
+  - `set_text_tool_active()`: TEXT 도구 선택 시에만 컨트롤 활성화
+  - `current_font_family`, `current_font_size`, `current_bold`, `current_italic` 속성
+- `app/ui/main_window.py`:
+  - 텍스트 스타일 시그널 연결 및 핸들러 추가
+  - `_sync_annot_style()`: 텍스트 스타일 필드 동기화 포함
+  - TEXT 도구 전환 시 텍스트 스타일 컨트롤 자동 활성화/비활성화
+- `tests/core/test_annotator.py`:
+  - `TestAnnotationStyle`: font_family/bold/italic 기본값 테스트 추가
+  - `TestResolveFont`: 폰트 패밀리별 변형 11개 테스트
+  - `TestAddTextStyled`: bold/italic/courier/times/korean 렌더링 7개 테스트
+- `app/ui/page_panel.py`: `closeEvent` 추가 — 위젯 닫힐 때 백그라운드 로더 정리
+- `tests/ui/test_page_panel.py`: `_cancel_loader()` 명시적 호출로 스레드 정리 수정
+
+### 비고
+- 자동 테스트 150/150 PASS
+
+---
+
 ## [Phase 5] 2026-03-16 — Undo/Redo, 단축키, exe 패키징 → v1.0.0
 
 ### 추가

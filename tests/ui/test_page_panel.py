@@ -107,6 +107,8 @@ class TestPagePanelThumbnailFixes:
         w.load_document(doc)
         # 썸네일 로딩 완료 전에도 아이템 수 = 페이지 수여야 함
         assert w._list.count() == doc.page_count
+        # 백그라운드 스레드를 명시적으로 정리해야 teardown 시 QThread 소멸 행이 방지됨
+        w._cancel_loader()
         doc.close()
 
     def test_reload_page_keeps_item_count(self, loaded_panel):
