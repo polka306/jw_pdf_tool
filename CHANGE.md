@@ -4,6 +4,20 @@
 
 ---
 
+## [테스트] 2026-03-16 — 중간 수정 사항 자동화 테스트 추가
+
+### 추가
+- `tests/core/test_pdf_document.py` — `TestPdfDocumentSaveIncremental` (3개)
+  - 동일 경로 incremental save 후 유효성 확인, page_count 보존, Save As 정상 동작
+- `tests/ui/test_pdf_viewer.py` — `TestSceneToPdf` (4개)
+  - rotation=0 페이지 원점 매핑, zoom 비율 스케일, MediaBox 범위 내 좌표, /Rotate 90 페이지 derotation_matrix 적용 확인
+- `TEST_SCENARIOS.md` — "중간 수정 사항 (버그 픽스 / 성능 개선)" 섹션 추가 (자동 12개 + 수동 6개)
+
+### 비고
+- 자동 테스트 103/103 PASS
+
+---
+
 ## [Phase 4] 2026-03-16 — 문서 변환 (이미지/Office → PDF)
 
 ### 추가

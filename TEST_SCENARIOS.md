@@ -211,10 +211,62 @@
 
 ---
 
+## 중간 수정 사항 (버그 픽스 / 성능 개선)
+
+Phase 경계와 무관하게 발생한 버그 수정 및 성능 개선에 대한 테스트 시나리오.
+
+### 자동화 테스트
+
+#### 썸네일 크기 버그 (setIconSize 누락)
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| FIX-A01 | [AUTO] | `test_icon_size_at_least_thumb_width` | PagePanel 로드 후 iconSize 확인 | iconSize().width() >= THUMB_WIDTH | ✅ PASS |
+| FIX-A02 | [AUTO] | `test_placeholder_items_appear_immediately_on_load` | load_document 직후 아이템 수 | 썸네일 로딩 전에도 count == page_count | ✅ PASS |
+
+#### reload_page() 단일 페이지 갱신
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| FIX-A03 | [AUTO] | `test_reload_page_keeps_item_count` | reload_page(0) 후 아이템 수 | 변화 없음 | ✅ PASS |
+| FIX-A04 | [AUTO] | `test_reload_page_preserves_text` | reload_page(1) 후 텍스트 | 페이지 번호 텍스트 유지 | ✅ PASS |
+| FIX-A05 | [AUTO] | `test_reload_page_out_of_range_no_crash` | reload_page(999) 호출 | 크래시 없이 무시 | ✅ PASS |
+
+#### 어노테이션 좌표 (_scene_to_pdf derotation_matrix)
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| FIX-A06 | [AUTO] | `test_origin_maps_to_origin_on_normal_page` | rotation=0 페이지에서 (0,0) 변환 | (0.0, 0.0) 반환 | ✅ PASS |
+| FIX-A07 | [AUTO] | `test_coord_scales_with_zoom_on_normal_page` | zoom=2.0, scene(200,100) 변환 | (100.0, 50.0) 반환 | ✅ PASS |
+| FIX-A08 | [AUTO] | `test_coord_within_page_bounds_on_normal_page` | 중앙 클릭 좌표 변환 | MediaBox 범위 내 | ✅ PASS |
+| FIX-A09 | [AUTO] | `test_rotated_page_coord_within_bounds` | /Rotate 90 페이지 중앙 클릭 변환 | 원본 MediaBox 범위 내 | ✅ PASS |
+
+#### incremental save (동일 경로 저장 성능)
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| FIX-A10 | [AUTO] | `test_save_to_same_path_produces_valid_pdf` | 동일 경로로 save() | 유효한 PDF 생성 | ✅ PASS |
+| FIX-A11 | [AUTO] | `test_save_to_same_path_preserves_page_count` | incremental save 후 재오픈 | page_count 보존 | ✅ PASS |
+| FIX-A12 | [AUTO] | `test_save_as_different_path_still_works` | 다른 경로로 Save As | 정상 저장 | ✅ PASS |
+
+### 수동 테스트
+
+| ID | 유형 | 시나리오 | 기대 결과 | 상태 |
+|----|------|----------|-----------|------|
+| FIX-M01 | [MANUAL] | /Rotate 90 PDF에 사각형 어노테이션 | 그린 위치와 저장 위치 일치 | ⏳ |
+| FIX-M02 | [MANUAL] | 가로 PDF에 텍스트 어노테이션 | 그린 위치와 저장 위치 일치 | ⏳ |
+| FIX-M03 | [MANUAL] | 30페이지 PDF 저장 (동일 경로) | 딜레이 없이 즉시 완료 | ⏳ |
+| FIX-M04 | [MANUAL] | 어노테이션 추가 후 썸네일 갱신 | 해당 페이지 썸네일만 갱신됨 (전체 재렌더 X) | ⏳ |
+| FIX-M05 | [MANUAL] | 삽입 다이얼로그 썸네일 크기 | 페이지 패널과 동일한 크기로 표시 | ⏳ |
+| FIX-M06 | [MANUAL] | 툴바 레이블/줌 숫자 표시 | 버튼 레이블 잘림 없음, 줌 % 숫자 완전 표시 | ⏳ |
+
+---
+
 ## 통합 실행 결과 (최신)
 
 | 날짜 | pytest 결과 | 수동 테스트 | 비고 |
 |------|------------|------------|------|
+| 2026-03-16 | 103/103 PASS | - | 중간 수정 테스트 추가 시점 |
 | 2026-03-16 | 91/91 PASS (5.78s) | Phase 0~4 자동 테스트 PASS | Phase 4 완료 시점 |
 | 2026-03-16 | 71/71 PASS (5.96s) | Phase 0~3 전체 PASS | Phase 3 완료 시점 |
 | 2026-03-16 | 47/47 PASS (4.75s) | Phase 0~2 전체 PASS | Phase 2 완료 시점 |
