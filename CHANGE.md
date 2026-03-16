@@ -4,6 +4,24 @@
 
 ---
 
+## [Phase 3] 2026-03-16 — 어노테이션 (텍스트/사각형/타원/선)
+
+### 추가
+- `app/core/annotator.py` — 어노테이션 로직 (add_rect/add_ellipse/add_line/add_text, AnnotationTool 열거형, AnnotationStyle)
+- `tests/core/test_annotator.py` — 어노테이션 단위 테스트 24개
+
+### 수정
+- `app/ui/pdf_viewer.py` — 어노테이션 도구 마우스 이벤트 (드래그 미리보기, 클릭 확정), `set_tool()`, `set_annotation_style()`
+- `app/ui/toolbar.py` — 어노테이션 도구 버튼군 (QActionGroup 배타적 선택), 색상 피커, 굵기 스핀박스
+- `app/ui/main_window.py` — 어노테이션 메뉴, 도구 변경/색상/굵기 연결, 상태바 도구 표시
+
+### 비고
+- 한글 폰트 자동 감지 (Windows Malgun Gothic)
+- 어노테이션은 PDF 콘텐츠 스트림에 직접 기록 (저장 시 모든 뷰어에서 표시)
+- 자동 테스트 71/71 PASS
+
+---
+
 ## [문서] 2026-03-16 — 테스트 시나리오 문서화 및 Phase 절차 규칙 확립
 
 ### 추가

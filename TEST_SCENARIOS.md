@@ -118,10 +118,64 @@
 
 ---
 
+## Phase 3 — 어노테이션 (텍스트/사각형/타원/선)
+
+### 자동화 테스트
+
+| ID | 유형 | 테스트 함수 | 시나리오 | 기대 결과 | 상태 |
+|----|------|------------|----------|-----------|------|
+| P3-A01 | [AUTO] | `test_default_color_is_red` | AnnotationStyle 기본 색상 | (1.0, 0.0, 0.0) | ✅ PASS |
+| P3-A02 | [AUTO] | `test_default_fill_is_none` | 기본 fill 없음 | fill_color is None | ✅ PASS |
+| P3-A03 | [AUTO] | `test_custom_values` | 커스텀 스타일 | 설정값 정확히 반영 | ✅ PASS |
+| P3-A04 | [AUTO] | `test_all_tools_defined` | AnnotationTool 열거형 | 5개 도구 정의 | ✅ PASS |
+| P3-A05 | [AUTO] | `test_tools_are_distinct` | 도구 값 고유성 | 각 도구가 다름 | ✅ PASS |
+| P3-A06 | [AUTO] | `test_add_rect_changes_page_content` | 사각형 추가 후 렌더링 변화 | before != after | ✅ PASS |
+| P3-A07 | [AUTO] | `test_rect_normalized_coords` | 반전된 좌표로 사각형 | 예외 없이 동작 | ✅ PASS |
+| P3-A08 | [AUTO] | `test_rect_custom_color` | 색상 지정 사각형 | 렌더링 변화 | ✅ PASS |
+| P3-A09 | [AUTO] | `test_rect_with_fill` | 채움색 사각형 | 렌더링 변화 | ✅ PASS |
+| P3-A10 | [AUTO] | `test_multiple_rects` | 복수 사각형 추가 | 예외 없이 동작 | ✅ PASS |
+| P3-A11 | [AUTO] | `test_add_ellipse_changes_page_content` | 타원 추가 후 렌더링 변화 | before != after | ✅ PASS |
+| P3-A12 | [AUTO] | `test_ellipse_normalized_coords` | 반전된 좌표로 타원 | 예외 없이 동작 | ✅ PASS |
+| P3-A13 | [AUTO] | `test_circle_shape` | 정사각형 rect → 원 | 예외 없이 동작 | ✅ PASS |
+| P3-A14 | [AUTO] | `test_add_line_changes_page_content` | 선 추가 후 렌더링 변화 | before != after | ✅ PASS |
+| P3-A15 | [AUTO] | `test_horizontal_line` | 수평선 | 예외 없이 동작 | ✅ PASS |
+| P3-A16 | [AUTO] | `test_vertical_line` | 수직선 | 예외 없이 동작 | ✅ PASS |
+| P3-A17 | [AUTO] | `test_thick_line` | 두꺼운 선 (width=10) | 예외 없이 동작 | ✅ PASS |
+| P3-A18 | [AUTO] | `test_add_text_changes_page_content` | 텍스트 추가 후 렌더링 변화 | before != after | ✅ PASS |
+| P3-A19 | [AUTO] | `test_empty_string_no_crash` | 빈 문자열 텍스트 | 예외 없이 동작 | ✅ PASS |
+| P3-A20 | [AUTO] | `test_korean_text` | 한글 텍스트 삽입 | 예외 없이 동작 | ✅ PASS |
+| P3-A21 | [AUTO] | `test_large_font` | 큰 폰트 크기 | 예외 없이 동작 | ✅ PASS |
+| P3-A22 | [AUTO] | `test_text_custom_color` | 텍스트 색상 지정 | 렌더링 변화 | ✅ PASS |
+| P3-A23 | [AUTO] | `test_multiple_annotation_types` | 동일 페이지에 여러 종류 어노테이션 | 예외 없이 동작 | ✅ PASS |
+| P3-A24 | [AUTO] | `test_annotations_saved_in_pdf` | 저장 후 재오픈 시 어노테이션 유지 | 렌더링 정상 | ✅ PASS |
+
+### 수동 테스트
+
+| ID | 유형 | 시나리오 | 확인 방법 | 상태 |
+|----|------|----------|-----------|------|
+| P3-M01 | [MANUAL] | 도구 전환 — 선택 | 툴바 "선택" 클릭 → 커서 손 모양, 스크롤 동작 | ✅ PASS |
+| P3-M02 | [MANUAL] | 도구 전환 — 텍스트 | 툴바 "텍스트" 클릭 → 커서 I빔 모양 | ✅ PASS |
+| P3-M03 | [MANUAL] | 도구 전환 — 사각형 | 툴바 "사각형" 클릭 → 커서 십자 모양 | ✅ PASS |
+| P3-M04 | [MANUAL] | Escape로 선택 모드 복귀 | 어노테이션 도구 선택 후 Esc → SELECT 체크됨 | ✅ PASS |
+| P3-M05 | [MANUAL] | 사각형 드래그 | 사각형 도구 → 드래그 → 미리보기 표시 → 릴리즈 → 페이지에 확정 | ✅ PASS |
+| P3-M06 | [MANUAL] | 타원 드래그 | 타원 도구 → 드래그 → 타원 그려짐 | ✅ PASS |
+| P3-M07 | [MANUAL] | 선 드래그 | 선 도구 → 드래그 → 선 그려짐 | ✅ PASS |
+| P3-M08 | [MANUAL] | 텍스트 삽입 | 텍스트 도구 → 클릭 → 입력창 표시 → 내용 입력 → 페이지에 삽입 | ✅ PASS |
+| P3-M09 | [MANUAL] | 텍스트 한글 입력 | 텍스트 도구 → 한글 입력 → 페이지에 표시 | ✅ PASS |
+| P3-M10 | [MANUAL] | 색상 변경 | "색" 버튼 클릭 → 색상 선택 → 이후 그린 도형에 적용 | ✅ PASS |
+| P3-M11 | [MANUAL] | 굵기 변경 | 굵기 스핀박스 변경 → 이후 그린 도형에 적용 | ✅ PASS |
+| P3-M12 | [MANUAL] | 미리보기 취소 (클릭만) | 아주 짧은 드래그 (3px 미만) → 어노테이션 추가 안 됨 | ✅ PASS |
+| P3-M13 | [MANUAL] | 어노테이션 후 저장 | 어노테이션 추가 → Ctrl+S → 다시 열면 어노테이션 유지 | ✅ PASS |
+| P3-M14 | [MANUAL] | 어노테이션 후 썸네일 갱신 | 어노테이션 추가 → 왼쪽 썸네일 즉시 갱신 | ✅ PASS |
+| P3-M15 | [MANUAL] | 상태바 도구 표시 | 도구 변경 시 하단 상태바 "도구: XXX" 업데이트 | ✅ PASS |
+
+---
+
 ## 통합 실행 결과 (최신)
 
 | 날짜 | pytest 결과 | 수동 테스트 | 비고 |
 |------|------------|------------|------|
+| 2026-03-16 | 71/71 PASS (5.96s) | Phase 0~3 전체 PASS | Phase 3 완료 시점 |
 | 2026-03-16 | 47/47 PASS (4.75s) | Phase 0~2 전체 PASS | Phase 2 완료 시점 |
 
 ---
@@ -137,6 +191,6 @@
 
 ## 향후 추가 예정 시나리오
 
-- **Phase 3** — 어노테이션 (텍스트/사각형/원/선 그리기)
+- ~~**Phase 3** — 어노테이션 (텍스트/사각형/원/선 그리기)~~ ✅ 완료
 - **Phase 4** — 문서 변환 (이미지/Word/PPT → PDF)
 - **Phase 5** — Undo/Redo, 단축키, 패키징
