@@ -8,7 +8,8 @@
 
 | 기능 | 상태 |
 |------|------|
-| PDF 미리보기 (줌/스크롤) | 개발 예정 |
+| PDF 미리보기 (줌/스크롤) | ✅ 완료 |
+| 페이지 썸네일 패널 | ✅ 완료 |
 | 페이지 편집 (추출/삽입/삭제/순서변경) | 개발 예정 |
 | 어노테이션 (텍스트/사각형/원/선) | 개발 예정 |
 | 문서 변환 (이미지/Word/PPT → PDF) | 개발 예정 |
@@ -28,11 +29,13 @@
 ## 설치 및 실행
 
 ```bash
-# 1. 의존성 설치
+# 방법 1: uv 사용
 uv sync
-
-# 2. 실행
 uv run python main.py
+
+# 방법 2: pip 직접 설치 (uv 네트워크 문제 발생 시)
+pip install PyQt6 PyMuPDF pikepdf Pillow reportlab
+python main.py
 ```
 
 ---
@@ -42,7 +45,7 @@ uv run python main.py
 ```
 02_PDF편집툴/
 ├── main.py                  # 앱 진입점
-├── pyproject.toml           # 의존성 (uv)
+├── pyproject.toml           # 의존성
 ├── PLAN.md                  # 구현 계획서
 ├── CLAUDE.md                # Claude 협업 규칙
 ├── CHANGE.md                # 변경 이력
@@ -50,20 +53,20 @@ uv run python main.py
 │
 ├── app/
 │   ├── core/
-│   │   ├── pdf_document.py  # PDF 로드/저장 래퍼
-│   │   ├── page_editor.py   # 페이지 추출/삽입/순서변경
-│   │   ├── annotator.py     # 어노테이션
-│   │   └── converter.py     # 문서 변환
+│   │   ├── pdf_document.py  # PDF 로드/저장/렌더링 래퍼 ✅
+│   │   ├── page_editor.py   # 페이지 추출/삽입/순서변경 (Phase 2)
+│   │   ├── annotator.py     # 어노테이션 (Phase 3)
+│   │   └── converter.py     # 문서 변환 (Phase 4)
 │   │
 │   ├── ui/
-│   │   ├── main_window.py   # 메인 윈도우
-│   │   ├── pdf_viewer.py    # PDF 미리보기 위젯
-│   │   ├── page_panel.py    # 썸네일 패널
-│   │   ├── toolbar.py       # 툴바
-│   │   └── dialogs/         # 각종 다이얼로그
+│   │   ├── main_window.py   # 메인 윈도우 ✅
+│   │   ├── pdf_viewer.py    # PDF 미리보기 위젯 ✅
+│   │   ├── page_panel.py    # 썸네일 패널 ✅
+│   │   ├── toolbar.py       # 툴바 ✅
+│   │   └── dialogs/         # 각종 다이얼로그 (Phase 2~)
 │   │
 │   └── utils/
-│       └── temp_manager.py  # 임시 파일 관리
+│       └── temp_manager.py  # 임시 파일 관리 (Phase 2)
 │
 └── assets/
     └── icons/
