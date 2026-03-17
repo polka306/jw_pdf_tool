@@ -19,5 +19,5 @@ if errorlevel 1 (
 )
 
 echo [2/2] Build complete!
-echo Output: %ROOT%\dist\PDF_Editor.exe
+echo Output folder: %ROOT%\dist\
 
