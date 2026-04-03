@@ -4,6 +4,57 @@
 
 ---
 
+## [테스트] 2026-04-03 — 종합 테스트 체계 구축 (155 → 262 테스트)
+
+### 문서 작성
+- `docs/FEATURE_SPEC.md` — 기능 정의서 (11개 섹션, 전체 기능 표 형식 정의)
+- `docs/USER_SCENARIOS.md` — 유저 시나리오 107개 (US-001~US-107)
+- `docs/TEST_SCENARIOS_FULL.md` — 테스트 시나리오 166개 (TC-001~TC-166, TC↔US 크로스 레퍼런스)
+- `docs/E2E_TEST_PLAN.md` — E2E 테스트 구현 계획서 (TC-155~TC-166, 상호 검증 확정본)
+- `docs/UNIT_COMPONENT_TEST_PLAN.md` — 단위/컴포넌트 테스트 구현 계획서 (TC-001~TC-154, 상호 검증 확정본)
+- `docs/E2E_TEST_PLAN_QA.md` — QA Lead 독립 계획 + 리뷰 결과
+- `docs/UNIT_COMPONENT_TEST_PLAN_QA.md` — QA Lead 독립 계획 + 리뷰 결과
+
+### 테스트 인프라
+- `tests/helpers.py` (신규) — 공통 monkeypatch 헬퍼 (load_pdf_directly, patch_* 함수, FakeInsertDialog)
+- `tests/conftest.py` — 픽스처 추가 (main_window, corrupt_pdf, text_file, pdf_10pages)
+- `tests/e2e/conftest.py` (신규) — E2E 전용 픽스처 (pdf_factory, image_factory)
+
+### Core 테스트 추가 (기존 파일 확장)
+- `tests/core/test_pdf_document.py` — TC-005, TC-008, TC-152 (3개 추가)
+- `tests/core/test_page_editor.py` — TC-049, TC-050 (2개 추가)
+- `tests/core/test_command_manager.py` — TC-100~103, TC-109, TC-111~112 (6개 추가)
+- `tests/core/test_annotator.py` — TC-069~074, TC-080~082, TC-087, TC-093, TC-096, TC-098 (11개 추가)
+- `tests/core/test_converter.py` — TC-114~115, TC-120~122 (5개 추가)
+- `tests/core/test_architecture.py` (신규) — TC-154 Core/UI 분리 AST 검증 (1개)
+
+### UI 테스트 추가
+- `tests/ui/test_toolbar.py` (신규) — TC-064~065, TC-068~070, TC-081~082, TC-085, TC-139~140 (10개)
+- `tests/ui/test_main_window.py` (신규) — 문서관리/페이지편집/Undo-Redo/도구전환 (20개)
+- `tests/ui/test_main_window_menu.py` (신규) — 메뉴/레이아웃/단축키 구조 검증 (10개)
+- `tests/ui/test_convert_dialog.py` (신규) — 변환 다이얼로그 (3개)
+- `tests/ui/test_pdf_viewer.py` — TC-021, TC-028, TC-065 (3개 추가)
+- `tests/ui/test_page_panel.py` — TC-030, TC-036 (2개 추가)
+
+### E2E 테스트 (신규 디렉토리)
+- `tests/e2e/` — 14개 파일, 31개 테스트
+  - TC-155: 열기→어노테이션→저장→재열기 영속성
+  - TC-156: 삽입→어노테이션→저장
+  - TC-157: 이동→삭제→Undo×2 복원
+  - TC-158: 이미지 변환→어노테이션→저장
+  - TC-159: 추출→내용 검증
+  - TC-160: 6개 어노테이션 Undo×6→Redo×6
+  - TC-161~163: 도구 전환/상태바/메뉴-툴바 동기화
+  - TC-164: 문서 미열림 시 비활성화
+  - TC-165: 정보 대화상자
+  - TC-166: 4종 커맨드 순차 Undo/Redo
+
+### 비고
+- 전체 자동화 테스트 262/262 PASS (53초)
+- 기존 155개 → 262개 (107개 신규 추가, 69% 증가)
+
+---
+
 ## [Phase 4.5] 2026-03-16 — 텍스트 어노테이션 스타일 확장
 
 ### 추가

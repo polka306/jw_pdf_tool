@@ -360,3 +360,117 @@ class TestCombined:
         pix = doc2[0].get_pixmap()
         assert pix.width > 0
         doc2.close()
+
+
+# ── 선 굵기 경계값 테스트 ────────────────────────────────────────────────────
+
+class TestLineWidthBounds:
+    def test_min_line_width(self, blank_page):
+        """TC-069: 0.5pt 최소 선 굵기로 그리기."""
+        page, _ = blank_page
+        before = _render_bytes(page)
+        add_line(page, 50, 50, 400, 400, AnnotationStyle(line_width=0.5))
+        after = _render_bytes(page)
+        assert before != after
+
+    def test_max_line_width(self, blank_page):
+        """TC-070: 20pt 최대 선 굵기로 그리기."""
+        page, _ = blank_page
+        before = _render_bytes(page)
+        add_line(page, 50, 50, 400, 400, AnnotationStyle(line_width=20.0))
+        after = _render_bytes(page)
+        assert before != after
+
+
+# ── 회전 페이지 어노테이션 추가 테스트 ───────────────────────────────────────
+
+class TestRotatedPageAnnotations:
+    def test_180_rotation_text(self):
+        """TC-073: 180도 회전 페이지에 텍스트 삽입이 정상 동작."""
+        doc = fitz.open()
+        doc.new_page(width=595, height=842)
+        page = doc[0]
+        page.set_rotation(180)
+        add_text(page, 100, 200, "R180 Text", AnnotationStyle())
+        text = page.get_text()
+        assert "R180" in text
+        doc.close()
+
+    def test_270_rotation_line(self):
+        """TC-074: 270도 회전 페이지에 선 그리기가 정상 동작."""
+        doc = fitz.open()
+        doc.new_page(width=595, height=842)
+        page = doc[0]
+        page.set_rotation(270)
+        before = _render_bytes(page)
+        add_line(page, 50, 50, 400, 400, AnnotationStyle())
+        after = _render_bytes(page)
+        assert before != after
+        doc.close()
+
+
+# ── 텍스트 크기 테스트 ───────────────────────────────────────────────────────
+
+class TestFontSizeBounds:
+    def test_font_size_24(self, blank_page):
+        """TC-080: 24pt 텍스트 삽입."""
+        page, _ = blank_page
+        before = _render_bytes(page)
+        add_text(page, 100, 200, "Size 24", AnnotationStyle(font_size=24.0))
+        after = _render_bytes(page)
+        assert before != after
+
+    def test_font_size_min_6pt(self, blank_page):
+        """TC-081: 최소 6pt 텍스트 삽입."""
+        page, _ = blank_page
+        add_text(page, 100, 200, "Tiny", AnnotationStyle(font_size=6.0))
+        assert _render_bytes(page)
+
+    def test_font_size_max_72pt(self, blank_page):
+        """TC-082: 최대 72pt 텍스트 삽입."""
+        page, _ = blank_page
+        add_text(page, 100, 200, "HUGE", AnnotationStyle(font_size=72.0))
+        assert _render_bytes(page)
+
+
+# ── 빈 텍스트 테스트 ─────────────────────────────────────────────────────────
+
+class TestEmptyText:
+    def test_empty_text_no_content_change(self, blank_page):
+        """TC-087: 빈 텍스트 입력 시 페이지 내용이 변경되지 않아야 합니다."""
+        page, _ = blank_page
+        before = _render_bytes(page)
+        add_text(page, 100, 200, "", AnnotationStyle())
+        after = _render_bytes(page)
+        assert before == after
+
+
+# ── 도형 커스텀 스타일 테스트 ────────────────────────────────────────────────
+
+class TestCustomStyleShapes:
+    def test_rect_custom_color_and_width(self, blank_page):
+        """TC-093: 사각형 커스텀 색상+굵기."""
+        page, _ = blank_page
+        style = AnnotationStyle(color=(0.0, 0.0, 1.0), line_width=5.0)
+        before = _render_bytes(page)
+        add_rect(page, 50, 50, 200, 150, style)
+        after = _render_bytes(page)
+        assert before != after
+
+    def test_ellipse_custom_color_and_width(self, blank_page):
+        """TC-096: 타원 커스텀 색상+굵기."""
+        page, _ = blank_page
+        style = AnnotationStyle(color=(0.0, 1.0, 0.0), line_width=8.0)
+        before = _render_bytes(page)
+        add_ellipse(page, 50, 50, 250, 200, style)
+        after = _render_bytes(page)
+        assert before != after
+
+    def test_line_custom_color_and_width(self, blank_page):
+        """TC-098: 선 커스텀 색상+굵기."""
+        page, _ = blank_page
+        style = AnnotationStyle(color=(0.0, 0.5, 0.0), line_width=3.0)
+        before = _render_bytes(page)
+        add_line(page, 50, 50, 400, 400, style)
+        after = _render_bytes(page)
+        assert before != after

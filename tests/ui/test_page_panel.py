@@ -129,3 +129,27 @@ class TestPagePanelThumbnailFixes:
         """범위 밖 인덱스로 reload_page를 호출해도 크래시가 없어야 합니다."""
         w, _ = loaded_panel
         w.reload_page(999)  # should silently do nothing
+
+
+class TestPagePanelSignals:
+    def test_set_current_row_emits_signal(self, loaded_panel, qtbot):
+        """TC-030: setCurrentRow 호출 시 page_selected 시그널 emit."""
+        w, _ = loaded_panel
+        with qtbot.waitSignal(w.page_selected, timeout=1000) as blocker:
+            w._list.setCurrentRow(1)
+        assert blocker.args == [1]
+
+    def test_multi_select_ctrl_click(self, loaded_panel):
+        """TC-036: 여러 아이템 선택 후 selected_indices 확인."""
+        from PyQt6.QtCore import QItemSelectionModel
+        w, _ = loaded_panel
+        # 첫 번째 아이템 선택
+        w._list.setCurrentRow(0)
+        # 추가 선택 (Ctrl+Click 시뮬레이션: selectionModel 직접 사용)
+        model = w._list.selectionModel()
+        idx_2 = w._list.model().index(2, 0)
+        model.select(idx_2, QItemSelectionModel.SelectionFlag.Select)
+        indices = w.selected_indices()
+        assert 0 in indices
+        assert 2 in indices
+        assert len(indices) == 2

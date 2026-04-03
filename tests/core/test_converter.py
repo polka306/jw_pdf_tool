@@ -210,3 +210,91 @@ class TestConvertOfficeToPdf:
                     str(tmp_path / "report.docx"), str(tmp_path)
                 )
         assert result == expected_out
+
+
+# ── 추가 변환 테스트 ─────────────────────────────────────────────────────────
+
+class TestConvertImagesToPdfExtra:
+
+    def test_mixed_formats_conversion(self, tmp_path):
+        """TC-114: 3가지 이미지 형식(PNG/JPG/BMP)을 PDF로 변환."""
+        from PIL import Image
+        from app.core.converter import convert_images_to_pdf
+        import fitz
+
+        paths = []
+        for ext, color in [("png", (255, 0, 0)), ("jpg", (0, 255, 0)), ("bmp", (0, 0, 255))]:
+            p = str(tmp_path / f"img.{ext}")
+            fmt = "JPEG" if ext == "jpg" else ext.upper()
+            Image.new("RGB", (200, 150), color=color).save(p, fmt)
+            paths.append(p)
+        out = str(tmp_path / "mixed.pdf")
+        convert_images_to_pdf(paths, out)
+        doc = fitz.open(out)
+        assert len(doc) == 3
+        doc.close()
+
+    @pytest.mark.parametrize("ext,pil_fmt", [
+        ("jpg", "JPEG"), ("jpeg", "JPEG"), ("png", "PNG"),
+        ("bmp", "BMP"), ("gif", "GIF"), ("tiff", "TIFF"),
+        ("tif", "TIFF"),
+    ])
+    def test_supported_format(self, tmp_path, ext, pil_fmt):
+        """TC-115: 개별 이미지 형식 변환 검증."""
+        from PIL import Image
+        from app.core.converter import convert_images_to_pdf
+
+        img_path = str(tmp_path / f"test.{ext}")
+        Image.new("RGB", (100, 80), color=(128, 128, 128)).save(img_path, pil_fmt)
+        out = str(tmp_path / f"out_{ext}.pdf")
+        result = convert_images_to_pdf([img_path], out)
+        assert os.path.exists(result)
+
+    def test_empty_images_raises(self, tmp_path):
+        """TC-120: 빈 이미지 리스트로 변환 시 ValueError."""
+        from app.core.converter import convert_images_to_pdf
+        with pytest.raises(ValueError):
+            convert_images_to_pdf([], str(tmp_path / "out.pdf"))
+
+
+class TestConvertOfficeToPdfExtra:
+
+    def test_docx_to_pdf_success(self, tmp_path, monkeypatch):
+        """TC-121: DOCX->PDF 변환 (monkeypatch 기반)."""
+        from app.core.converter import convert_office_to_pdf
+        expected_out = str(tmp_path / "report.pdf")
+        open(expected_out, "w").close()  # 빈 파일 생성 (LO 출력 시뮬레이션)
+
+        # find_libreoffice 패치
+        monkeypatch.setattr(
+            "app.core.converter.find_libreoffice",
+            lambda: "/fake/soffice",
+        )
+
+        # subprocess.run 패치
+        class FakeResult:
+            returncode = 0
+            stderr = ""
+
+        run_calls = []
+
+        def fake_run(*args, **kwargs):
+            run_calls.append(args)
+            return FakeResult()
+
+        monkeypatch.setattr("subprocess.run", fake_run)
+
+        result = convert_office_to_pdf(
+            str(tmp_path / "report.docx"), str(tmp_path)
+        )
+        assert result == expected_out
+        assert len(run_calls) == 1
+
+
+class TestSupportedExtensionsExtra:
+
+    def test_all_office_exts(self):
+        """TC-122: 모든 Office 확장자가 포함되어야 합니다."""
+        from app.core.converter import SUPPORTED_OFFICE_EXTS
+        expected = {".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt", ".odt", ".ods", ".odp"}
+        assert expected.issubset(SUPPORTED_OFFICE_EXTS)

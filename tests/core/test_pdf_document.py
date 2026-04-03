@@ -131,3 +131,53 @@ class TestPdfDocumentSaveIncremental:
         doc2.open(out)
         assert doc2.page_count == open_doc.page_count
         doc2.close()
+
+
+# ── 추가 테스트 ──────────────────────────────────────────────────────────────
+
+class TestPdfDocumentOpenExtra:
+    def test_open_non_pdf_file_raises(self, corrupt_pdf):
+        """TC-005: PDF가 아닌 파일 열기 시도 시 예외가 발생하거나 페이지 수가 0이어야 합니다."""
+        doc = PdfDocument()
+        try:
+            doc.open(corrupt_pdf)
+            # PyMuPDF가 열더라도 유효한 PDF가 아니면 페이지 수가 0
+            assert doc.page_count == 0
+        except Exception:
+            pass  # 예외 발생도 허용
+        finally:
+            doc.close()
+
+
+class TestPdfDocumentSaveExtra:
+    def test_save_when_not_open(self):
+        """TC-008: 문서 미열림 시 저장 시도 시 RuntimeError 발생."""
+        doc = PdfDocument()
+        with pytest.raises(RuntimeError):
+            doc.save()
+
+
+class TestPdfDocumentIncrementalSaveFallback:
+    def test_incremental_save_fallback(self, tmp_path):
+        """TC-152: incremental save가 실패해도 전체 저장으로 폴백하여 성공해야 한다."""
+        import fitz
+
+        path = str(tmp_path / "fallback.pdf")
+        doc = PdfDocument()
+        raw = fitz.open()
+        raw.new_page(width=595, height=842)
+        raw.save(path)
+        raw.close()
+
+        doc.open(path)
+        for _ in range(5):
+            doc.raw.new_page()
+        for i in range(4, 0, -1):
+            doc.raw.delete_page(i)
+        doc.save()  # 폴백 발생해도 성공해야 함
+        doc.close()
+
+        doc2 = PdfDocument()
+        doc2.open(path)
+        assert doc2.is_open
+        doc2.close()

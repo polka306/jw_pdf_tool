@@ -158,3 +158,27 @@ class TestSceneToPdf:
         assert mbox.x0 <= x <= mbox.x1
         assert mbox.y0 <= y <= mbox.y1
         doc.close()
+
+
+class TestPdfViewerAdditional:
+    def test_zoom_fit_no_crash(self, loaded_viewer):
+        """TC-021: zoom_fit 호출 시 크래시 없음."""
+        w, _ = loaded_viewer
+        w.zoom_fit()
+        assert isinstance(w.zoom, float)
+
+    def test_first_page_pgup_no_change(self, loaded_viewer):
+        """TC-028: 첫 페이지에서 goto_page(-1) 호출 시 무시."""
+        w, _ = loaded_viewer
+        assert w.current_page == 0
+        w.goto_page(-1)
+        assert w.current_page == 0
+
+    def test_set_tool_select(self, loaded_viewer):
+        """TC-065: set_tool(SELECT) 호출 시 _current_tool 변경 확인."""
+        from app.core.annotator import AnnotationTool
+        w, _ = loaded_viewer
+        w.set_tool(AnnotationTool.RECT)
+        assert w._current_tool == AnnotationTool.RECT
+        w.set_tool(AnnotationTool.SELECT)
+        assert w._current_tool == AnnotationTool.SELECT

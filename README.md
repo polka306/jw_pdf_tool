@@ -80,6 +80,24 @@ python main.py
 uv run python -m pytest tests/ -v
 ```
 
+총 **262개** 자동화 테스트 (Core 136 + UI 95 + E2E 31):
+
+| 카테고리 | 파일 | 테스트 수 |
+|----------|------|-----------|
+| Core | `tests/core/test_pdf_document.py` | 16 |
+| Core | `tests/core/test_page_editor.py` | 14 |
+| Core | `tests/core/test_command_manager.py` | 31 |
+| Core | `tests/core/test_annotator.py` | 60 |
+| Core | `tests/core/test_converter.py` | 31 |
+| Core | `tests/core/test_architecture.py` | 1 |
+| UI | `tests/ui/test_pdf_viewer.py` | 22 |
+| UI | `tests/ui/test_page_panel.py` | 15 |
+| UI | `tests/ui/test_toolbar.py` | 10 |
+| UI | `tests/ui/test_main_window.py` | 20 |
+| UI | `tests/ui/test_main_window_menu.py` | 10 |
+| UI | `tests/ui/test_convert_dialog.py` | 3 |
+| E2E | `tests/e2e/test_tc155~tc166` | 31 |
+
 ---
 
 ## exe 빌드
@@ -92,15 +110,17 @@ uv run pyinstaller pdf_editor.spec --clean
 
 결과물: `dist/PDF편집툴.exe`
 
-- **Core 테스트** (`tests/core/`) — PDF 로드/저장/렌더링, 페이지 편집 로직
-- **UI 테스트** (`tests/ui/`) — PyQt6 위젯 (offscreen 헤드리스 모드, 디스플레이 불필요)
-
 ---
 
 ## 개발 문서
 
 - 구현 계획 상세: [PLAN.md](PLAN.md)
-- 테스트 시나리오: [TEST_SCENARIOS.md](TEST_SCENARIOS.md)
+- 기능 정의서: [docs/FEATURE_SPEC.md](docs/FEATURE_SPEC.md)
+- 유저 시나리오: [docs/USER_SCENARIOS.md](docs/USER_SCENARIOS.md)
+- 테스트 시나리오 (상세): [docs/TEST_SCENARIOS_FULL.md](docs/TEST_SCENARIOS_FULL.md)
+- E2E 테스트 계획: [docs/E2E_TEST_PLAN.md](docs/E2E_TEST_PLAN.md)
+- 단위/컴포넌트 테스트 계획: [docs/UNIT_COMPONENT_TEST_PLAN.md](docs/UNIT_COMPONENT_TEST_PLAN.md)
+- 테스트 시나리오 (Phase별): [TEST_SCENARIOS.md](TEST_SCENARIOS.md)
 - 변경 이력: [CHANGE.md](CHANGE.md)
 - 협업 규칙: [CLAUDE.md](CLAUDE.md)
 

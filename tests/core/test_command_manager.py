@@ -254,3 +254,61 @@ class TestAddAnnotationCommand:
     def test_custom_description(self, raw_3pages):
         cmd = AddAnnotationCommand(raw_3pages, 0, lambda: None, description="사각형 추가")
         assert cmd.description == "사각형 추가"
+
+
+# ── 추가 CommandManager 테스트 ───────────────────────────────────────────────
+
+class TestCommandManagerExtra:
+    def test_undo_reverses_last_command(self, cmd_mgr, raw_3pages):
+        """TC-100: Undo가 마지막 커맨드를 되돌려야 합니다."""
+        texts = [raw_3pages[i].get_text().strip() for i in range(3)]
+        cmd_mgr.execute(MovePageCommand(raw_3pages, 0, 2))
+        cmd_mgr.undo()
+        assert [raw_3pages[i].get_text().strip() for i in range(3)] == texts
+
+    def test_consecutive_undo(self, cmd_mgr, raw_3pages):
+        """TC-101: 3개 커맨드 실행 후 3번 Undo로 원래 상태 복원."""
+        original = [raw_3pages[i].get_text().strip() for i in range(3)]
+        cmd_mgr.execute(MovePageCommand(raw_3pages, 0, 2))
+        cmd_mgr.execute(MovePageCommand(raw_3pages, 0, 1))
+        cmd_mgr.execute(MovePageCommand(raw_3pages, 1, 2))
+        for _ in range(3):
+            cmd_mgr.undo()
+        assert [raw_3pages[i].get_text().strip() for i in range(3)] == original
+
+    def test_max_history_50(self, cmd_mgr, raw_3pages):
+        """TC-103: 51개 실행 후 Undo 가능 횟수가 50 이하여야 합니다."""
+        for i in range(51):
+            cmd_mgr.execute(MovePageCommand(raw_3pages, 0, 1))
+        count = 0
+        while cmd_mgr.can_undo:
+            cmd_mgr.undo()
+            count += 1
+        assert count == 50
+
+    def test_redo_reapplies_command(self, cmd_mgr, raw_3pages):
+        """TC-109: Redo가 Undo된 커맨드를 다시 적용해야 합니다."""
+        cmd_mgr.execute(MovePageCommand(raw_3pages, 0, 2))
+        after_exec = [raw_3pages[i].get_text().strip() for i in range(3)]
+        cmd_mgr.undo()
+        cmd_mgr.redo()
+        assert [raw_3pages[i].get_text().strip() for i in range(3)] == after_exec
+
+    def test_redo_when_empty_is_noop(self, cmd_mgr):
+        """TC-111: Redo 이력이 없을 때 아무 동작도 하지 않아야 합니다."""
+        result = cmd_mgr.redo()
+        assert result is None
+        assert not cmd_mgr.can_redo
+
+    def test_undo_redo_undo_cycle(self, cmd_mgr, raw_3pages):
+        """TC-112: Undo->Redo->Undo 반복 시 상태가 올바르게 전환."""
+        original = [raw_3pages[i].get_text().strip() for i in range(3)]
+        cmd_mgr.execute(MovePageCommand(raw_3pages, 0, 2))
+        after_exec = [raw_3pages[i].get_text().strip() for i in range(3)]
+
+        cmd_mgr.undo()
+        assert [raw_3pages[i].get_text().strip() for i in range(3)] == original
+        cmd_mgr.redo()
+        assert [raw_3pages[i].get_text().strip() for i in range(3)] == after_exec
+        cmd_mgr.undo()
+        assert [raw_3pages[i].get_text().strip() for i in range(3)] == original

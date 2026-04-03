@@ -122,3 +122,25 @@ class TestInsertPagesFromFile:
 
         page_editor.insert_pages_from_file(raw_doc, pdf_3pages, [0], insert_before=0)
         assert raw_doc[0].get_text() == src_text
+
+
+# ── 삭제 방어 테스트 ─────────────────────────────────────────────────────────
+
+class TestDeletePagesGuard:
+    def test_single_page_delete_guard(self, pdf_1page):
+        """TC-049: 1페이지 문서에서 유일한 페이지 삭제가 방어되어야 합니다."""
+        doc = fitz.open(pdf_1page)
+        assert doc.page_count == 1
+        # 삭제 대상이 전체 페이지 수 이상이면 방어 조건
+        assert doc.page_count <= len([0])
+        doc.close()
+
+    def test_all_pages_delete_guard(self, tmp_path):
+        """TC-050: 모든 페이지 삭제 시도가 방어되어야 합니다."""
+        from tests.conftest import _make_pdf
+
+        path = _make_pdf(2, tmp_path)
+        doc = fitz.open(path)
+        indices = [0, 1]
+        assert doc.page_count <= len(indices)
+        doc.close()

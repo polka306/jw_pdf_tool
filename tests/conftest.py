@@ -53,6 +53,30 @@ def pdf_5pages(tmp_path) -> str:
 
 
 @pytest.fixture
+def pdf_10pages(tmp_path) -> str:
+    """10페이지짜리 테스트 PDF 경로."""
+    return _make_pdf(10, tmp_path)
+
+
+@pytest.fixture
+def corrupt_pdf(tmp_path) -> str:
+    """손상된 파일 경로 (PDF가 아닌 내용)."""
+    path = str(tmp_path / "corrupt.pdf")
+    with open(path, "wb") as f:
+        f.write(b"This is not a PDF file at all!")
+    return path
+
+
+@pytest.fixture
+def text_file(tmp_path) -> str:
+    """PDF가 아닌 텍스트 파일 경로."""
+    path = str(tmp_path / "readme.txt")
+    with open(path, "w") as f:
+        f.write("hello world")
+    return path
+
+
+@pytest.fixture
 def open_doc(pdf_3pages):
     """열려 있는 PdfDocument 인스턴스 (3페이지)."""
     from app.core.pdf_document import PdfDocument
@@ -60,3 +84,16 @@ def open_doc(pdf_3pages):
     doc.open(pdf_3pages)
     yield doc
     doc.close()
+
+
+@pytest.fixture
+def main_window(qtbot):
+    """MainWindow 인스턴스. teardown에서 QThread 정리 + close."""
+    from app.ui.main_window import MainWindow
+    win = MainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    yield win
+    if hasattr(win, '_page_panel') and hasattr(win._page_panel, '_cancel_loader'):
+        win._page_panel._cancel_loader()
+    win.close()
