@@ -4,6 +4,35 @@
 
 ---
 
+## [기능] 2026-04-03 — Markdown → PDF 변환 기능 추가
+
+### 추가
+- `app/core/converter.py`:
+  - `SUPPORTED_MARKDOWN_EXTS` — 지원 확장자 (.md, .markdown, .mkd, .mdown)
+  - `find_pandoc()` / `is_pandoc_available()` — Pandoc 탐지 (환경변수 → 설치경로 → PATH)
+  - `convert_markdown_to_pdf()` — Pandoc 우선, Python 폴백 (markdown + fitz.Story)
+  - `_convert_markdown_pandoc()` — Pandoc CLI 기반 고품질 변환 (한글 폰트, 코드 하이라이팅)
+  - `_convert_markdown_fitz()` — 순수 Python 변환 (markdown→HTML→fitz.Story→PDF)
+  - `_resolve_md_image_paths()` — 상대 이미지 경로 절대경로 변환
+  - `_read_and_merge_markdown()` — 다중 MD 파일 병합
+- `app/ui/dialogs/convert_dialog.py`:
+  - `_MarkdownTab` — Markdown 변환 탭 (파일 추가/제거/순서 변경, Pandoc 상태 표시)
+  - ConvertDialog에 3번째 탭 등록
+  - `_ConvertWorker.run()` markdown 모드 분기
+- `pyproject.toml`: `markdown>=3.5.0` 의존성 추가
+
+### 테스트 추가
+- `tests/core/test_converter_markdown.py` — 15개 테스트
+  - Pandoc 탐지, 지원 형식, 단일/다중 파일 변환, 한글/테이블/코드블록, Pandoc 경로/폴백 검증
+- `tests/ui/test_convert_dialog.py` — 탭 3개 확인 + Markdown 탭 존재 검증 추가
+
+### 비고
+- Pandoc 설치 시: 고품질 PDF (xelatex, 한글 맑은 고딕, 코드 하이라이팅)
+- Pandoc 미설치 시: Python 폴백 자동 동작 (markdown + fitz.Story, 외부 의존성 불필요)
+- 전체 자동화 테스트 277/277 PASS
+
+---
+
 ## [테스트] 2026-04-03 — 종합 테스트 체계 구축 (155 → 262 테스트)
 
 ### 문서 작성

@@ -12,7 +12,7 @@
 | 페이지 썸네일 패널 | ✅ 완료 |
 | 페이지 편집 (추출/삽입/삭제/순서변경) | ✅ 완료 |
 | 어노테이션 (텍스트/사각형/타원/선) | ✅ 완료 |
-| 문서 변환 (이미지/Word/PPT → PDF) | ✅ 완료 |
+| 문서 변환 (이미지/Word/PPT/Markdown → PDF) | ✅ 완료 |
 | Undo/Redo (페이지 편집 + 어노테이션) | ✅ 완료 |
 | exe 패키징 (PyInstaller) | ✅ 완료 |
 
@@ -23,6 +23,7 @@
 - Python 3.11 이상
 - [uv](https://github.com/astral-sh/uv) 패키지 매니저
 - (선택) LibreOffice — Word/PPT/Excel → PDF 변환 기능 사용 시 필요
+- (선택) [Pandoc](https://pandoc.org) — Markdown → PDF 고품질 변환 시 필요 (미설치 시 Python 기본 변환 사용)
 
 ---
 

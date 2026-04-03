@@ -23,6 +23,10 @@ SUPPORTED_OFFICE_EXTS: frozenset[str] = frozenset({
     ".odt", ".ods", ".odp",
 })
 
+SUPPORTED_MARKDOWN_EXTS: frozenset[str] = frozenset({
+    ".md", ".markdown", ".mkd", ".mdown",
+})
+
 # ── 이미지 → PDF ──────────────────────────────────────────────────────────────
 
 def convert_images_to_pdf(image_paths: list[str], output_path: str) -> str:
@@ -140,3 +144,245 @@ def find_libreoffice() -> str | None:
 def is_libreoffice_available() -> bool:
     """LibreOffice 사용 가능 여부를 반환합니다."""
     return find_libreoffice() is not None
+
+
+# ── Pandoc 탐지 ──────────────────────────────────────────────────────────────
+
+_PANDOC_CANDIDATES: list[str] = [
+    r"C:\Program Files\Pandoc\pandoc.exe",
+    r"C:\Program Files (x86)\Pandoc\pandoc.exe",
+]
+
+
+def find_pandoc() -> str | None:
+    """Pandoc 실행 파일 경로를 반환합니다. 찾지 못하면 None."""
+    # 1. 환경 변수 우선
+    env_path = os.environ.get("PANDOC_PATH")
+    if env_path and os.path.isfile(env_path):
+        return env_path
+
+    # 2. 표준 설치 경로
+    for candidate in _PANDOC_CANDIDATES:
+        if os.path.isfile(candidate):
+            return candidate
+
+    # 3. AppData\Local\Pandoc (winget/scoop 설치 시)
+    local_app = os.environ.get("LOCALAPPDATA", "")
+    if local_app:
+        local_pandoc = os.path.join(local_app, "Pandoc", "pandoc.exe")
+        if os.path.isfile(local_pandoc):
+            return local_pandoc
+
+    # 4. PATH 탐지
+    return shutil.which("pandoc")
+
+
+def is_pandoc_available() -> bool:
+    """Pandoc 사용 가능 여부를 반환합니다."""
+    return find_pandoc() is not None
+
+
+# ── Markdown → PDF ───────────────────────────────────────────────────────────
+
+def _resolve_md_image_paths(text: str, base_dir: str) -> str:
+    """Markdown 내 상대 이미지 경로를 절대 경로로 변환합니다."""
+    import re
+
+    def _resolve(m):
+        alt, rel_path = m.group(1), m.group(2)
+        abs_path = os.path.normpath(os.path.join(base_dir, rel_path))
+        return f"![{alt}]({abs_path})"
+
+    # ![alt](relative/path) 패턴 — http(s):// 및 절대 경로 제외
+    return re.sub(
+        r'!\[([^\]]*)\]\((?!https?://|[A-Za-z]:\\|/)([^)]+)\)',
+        _resolve,
+        text,
+    )
+
+
+def _read_and_merge_markdown(md_paths: list[str]) -> tuple[str, str]:
+    """여러 Markdown 파일을 하나로 합치고, (합친 텍스트, 첫 파일 디렉토리)를 반환합니다."""
+    parts: list[str] = []
+    first_dir = os.path.dirname(os.path.abspath(md_paths[0]))
+    for path in md_paths:
+        base_dir = os.path.dirname(os.path.abspath(path))
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        content = _resolve_md_image_paths(content, base_dir)
+        parts.append(content)
+    return "\n\n---\n\n".join(parts), first_dir
+
+
+def _convert_markdown_pandoc(
+    md_text: str,
+    output_path: str,
+    resource_dir: str,
+) -> bool:
+    """Pandoc으로 Markdown을 PDF로 변환합니다. 성공하면 True."""
+    pandoc = find_pandoc()
+    if pandoc is None:
+        return False
+
+    import tempfile
+    tmp_md = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".md", encoding="utf-8", delete=False,
+    )
+    try:
+        tmp_md.write(md_text)
+        tmp_md.close()
+
+        # 기본 명령 — Pandoc이 적절한 PDF 엔진을 자동 선택
+        cmd = [
+            pandoc,
+            tmp_md.name,
+            "-o", output_path,
+            f"--resource-path={resource_dir}",
+            "--highlight-style=tango",
+            "-V", "geometry:margin=2.5cm",
+            "-V", "mainfont=Malgun Gothic",
+            "-V", "monofont=Consolas",
+        ]
+
+        kwargs: dict = {
+            "capture_output": True,
+            "text": True,
+            "encoding": "utf-8",
+            "timeout": 120,
+        }
+        if sys.platform == "win32":
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
+        result = subprocess.run(cmd, **kwargs)
+        if result.returncode == 0 and os.path.exists(output_path):
+            return True
+
+        # xelatex 엔진을 명시적으로 지정하여 재시도
+        cmd_xelatex = cmd + ["--pdf-engine=xelatex"]
+        result = subprocess.run(cmd_xelatex, **kwargs)
+        if result.returncode == 0 and os.path.exists(output_path):
+            return True
+
+        return False
+    finally:
+        try:
+            os.unlink(tmp_md.name)
+        except OSError:
+            pass
+
+
+_MD_HTML_TEMPLATE = """\
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {{
+    font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #333;
+  }}
+  h1 {{ font-size: 22pt; border-bottom: 2px solid #333; padding-bottom: 6px; }}
+  h2 {{ font-size: 18pt; border-bottom: 1px solid #999; padding-bottom: 4px; }}
+  h3 {{ font-size: 14pt; }}
+  code {{
+    font-family: "Consolas", "D2Coding", monospace;
+    background: #f4f4f4;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 10pt;
+  }}
+  pre {{
+    background: #f4f4f4;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+  }}
+  pre code {{
+    background: none;
+    padding: 0;
+  }}
+  table {{
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+  }}
+  th, td {{
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: left;
+  }}
+  th {{
+    background: #f0f0f0;
+    font-weight: bold;
+  }}
+  blockquote {{
+    border-left: 4px solid #ccc;
+    margin: 8px 0;
+    padding: 4px 16px;
+    color: #666;
+  }}
+  hr {{
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 24px 0;
+  }}
+  img {{
+    max-width: 100%;
+  }}
+</style>
+</head>
+<body>
+{body}
+</body>
+</html>
+"""
+
+
+def _convert_markdown_fitz(md_text: str, output_path: str) -> str:
+    """Python (markdown + fitz.Story)으로 Markdown을 PDF로 변환합니다."""
+    import markdown as md_lib
+    import fitz
+
+    html_body = md_lib.markdown(
+        md_text,
+        extensions=["tables", "fenced_code", "toc", "attr_list"],
+    )
+    full_html = _MD_HTML_TEMPLATE.format(body=html_body)
+
+    story = fitz.Story(html=full_html)
+    writer = fitz.DocumentWriter(output_path)
+    mediabox = fitz.paper_rect("a4")
+    where = mediabox + fitz.Rect(54, 54, -54, -54)  # ~1.9cm 마진
+
+    more = True
+    while more:
+        dev = writer.begin_page(mediabox)
+        more, _ = story.place(where)
+        story.draw(dev)
+        writer.end_page()
+
+    writer.close()
+    return output_path
+
+
+def convert_markdown_to_pdf(md_paths: list[str], output_path: str) -> str:
+    """Markdown 파일을 PDF로 변환합니다.
+
+    Pandoc이 설치되어 있으면 고품질 변환을 수행하고,
+    없거나 실패하면 Python 기본 변환(markdown + fitz)으로 폴백합니다.
+
+    반환값: output_path (str)
+    """
+    if not md_paths:
+        raise ValueError("변환할 Markdown 파일이 없습니다.")
+
+    md_text, resource_dir = _read_and_merge_markdown(md_paths)
+
+    # 1차: Pandoc 시도
+    if _convert_markdown_pandoc(md_text, output_path, resource_dir):
+        return output_path
+
+    # 2차: Python 폴백
+    return _convert_markdown_fitz(md_text, output_path)

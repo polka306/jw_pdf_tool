@@ -1,4 +1,4 @@
-"""문서 변환 다이얼로그 — 이미지/Office 문서 → PDF."""
+"""문서 변환 다이얼로그 — 이미지/Office/Markdown → PDF."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class _ConvertWorker(QObject):
 
     def __init__(
         self,
-        mode: str,                    # "image" | "office"
+        mode: str,                    # "image" | "office" | "markdown"
         files: list[str],
         output_path: str,
     ) -> None:
@@ -60,10 +60,19 @@ class _ConvertWorker(QObject):
                 out = converter.convert_images_to_pdf(self._files, self._output_path)
                 self.progress.emit(100, "완료")
                 self.finished.emit([out])
-            else:
+            elif self._mode == "office":
                 self.progress.emit(10, "LibreOffice 변환 중... (시간이 걸릴 수 있습니다)")
                 out_dir = str(Path(self._output_path).parent)
                 out = converter.convert_office_to_pdf(self._files[0], out_dir)
+                self.progress.emit(100, "완료")
+                self.finished.emit([out])
+            elif self._mode == "markdown":
+                pandoc_ok = converter.is_pandoc_available()
+                engine = "Pandoc" if pandoc_ok else "Python 기본 변환"
+                self.progress.emit(10, f"Markdown 변환 중... ({engine})")
+                out = converter.convert_markdown_to_pdf(
+                    self._files, self._output_path,
+                )
                 self.progress.emit(100, "완료")
                 self.finished.emit([out])
         except Exception as exc:
@@ -218,6 +227,105 @@ class _OfficeTab(QWidget):
         return self._list.count() > 0 and converter.is_libreoffice_available()
 
 
+# ── Markdown 탭 ──────────────────────────────────────────────────────────────
+
+class _MarkdownTab(QWidget):
+    """Markdown → PDF 변환 탭."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 8, 8, 4)
+
+        # Pandoc 상태
+        pandoc_ok = converter.is_pandoc_available()
+        if pandoc_ok:
+            pandoc_path = converter.find_pandoc()
+            status_text = f"✔ Pandoc 감지됨 (고품질 변환)\n{pandoc_path}"
+            status_color = "#4caf50"
+        else:
+            status_text = (
+                "⚠ Pandoc 미설치 — Python 기본 변환을 사용합니다.\n"
+                "고품질 변환을 위해 pandoc.org 에서 설치하세요."
+            )
+            status_color = "#ff9800"
+        lbl_status = QLabel(status_text)
+        lbl_status.setStyleSheet(
+            f"color:{status_color}; font-size:11px; padding:4px;"
+        )
+        lbl_status.setWordWrap(True)
+        layout.addWidget(lbl_status)
+
+        # 버튼 행
+        btn_row = QHBoxLayout()
+        btn_add = QPushButton("파일 추가...")
+        btn_add.clicked.connect(self._add_files)
+        btn_remove = QPushButton("선택 제거")
+        btn_remove.clicked.connect(self._remove_selected)
+        btn_up = QPushButton("▲")
+        btn_up.setFixedWidth(32)
+        btn_up.clicked.connect(self._move_up)
+        btn_dn = QPushButton("▼")
+        btn_dn.setFixedWidth(32)
+        btn_dn.clicked.connect(self._move_down)
+        btn_row.addWidget(btn_add)
+        btn_row.addWidget(btn_remove)
+        btn_row.addStretch()
+        btn_row.addWidget(btn_up)
+        btn_row.addWidget(btn_dn)
+        layout.addLayout(btn_row)
+
+        # 파일 목록
+        self._list = QListWidget()
+        self._list.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection,
+        )
+        layout.addWidget(self._list, 1)
+
+        exts = ", ".join(sorted(converter.SUPPORTED_MARKDOWN_EXTS))
+        lbl = QLabel(f"지원 형식: {exts}")
+        lbl.setStyleSheet("color:#888; font-size:11px;")
+        layout.addWidget(lbl)
+
+    def _add_files(self) -> None:
+        exts_filter = " ".join(
+            f"*{e}" for e in sorted(converter.SUPPORTED_MARKDOWN_EXTS)
+        )
+        paths, _ = QFileDialog.getOpenFileNames(
+            self, "Markdown 파일 선택", "",
+            f"Markdown 파일 ({exts_filter});;모든 파일 (*)",
+        )
+        for p in paths:
+            self._list.addItem(QListWidgetItem(p))
+
+    def _remove_selected(self) -> None:
+        for item in self._list.selectedItems():
+            self._list.takeItem(self._list.row(item))
+
+    def _move_up(self) -> None:
+        row = self._list.currentRow()
+        if row > 0:
+            item = self._list.takeItem(row)
+            self._list.insertItem(row - 1, item)
+            self._list.setCurrentRow(row - 1)
+
+    def _move_down(self) -> None:
+        row = self._list.currentRow()
+        if row < self._list.count() - 1:
+            item = self._list.takeItem(row)
+            self._list.insertItem(row + 1, item)
+            self._list.setCurrentRow(row + 1)
+
+    def get_files(self) -> list[str]:
+        return [self._list.item(i).text() for i in range(self._list.count())]
+
+    def is_ready(self) -> bool:
+        return self._list.count() > 0
+
+
 # ── 변환 다이얼로그 ───────────────────────────────────────────────────────────
 
 class ConvertDialog(QDialog):
@@ -249,8 +357,10 @@ class ConvertDialog(QDialog):
         self._tabs = QTabWidget()
         self._tab_image = _ImageTab()
         self._tab_office = _OfficeTab()
-        self._tabs.addTab(self._tab_image,  "이미지 → PDF")
-        self._tabs.addTab(self._tab_office, "문서 → PDF (LibreOffice)")
+        self._tab_markdown = _MarkdownTab()
+        self._tabs.addTab(self._tab_image,    "이미지 → PDF")
+        self._tabs.addTab(self._tab_office,   "문서 → PDF (LibreOffice)")
+        self._tabs.addTab(self._tab_markdown, "Markdown → PDF")
         layout.addWidget(self._tabs, 1)
 
         # 출력 경로
@@ -317,12 +427,18 @@ class ConvertDialog(QDialog):
                 QMessageBox.warning(self, "경고", "변환할 이미지를 추가하세요.")
                 return
             mode = "image"
-        else:
+        elif idx == 1:
             files = self._tab_office.get_files()
             if not files:
                 QMessageBox.warning(self, "경고", "변환할 파일을 추가하세요.")
                 return
             mode = "office"
+        else:
+            files = self._tab_markdown.get_files()
+            if not files:
+                QMessageBox.warning(self, "경고", "변환할 Markdown 파일을 추가하세요.")
+                return
+            mode = "markdown"
 
         self._btn_convert.setEnabled(False)
         self._progress.setValue(0)

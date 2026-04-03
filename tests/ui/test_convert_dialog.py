@@ -13,12 +13,21 @@ def test_convert_shortcut_binding(main_window):
     assert "C" in shortcut
 
 
-def test_dialog_has_two_tabs(qtbot):
-    """TC-127: ConvertDialog에 2개 이상의 탭이 있다."""
+def test_dialog_has_three_tabs(qtbot):
+    """TC-127: ConvertDialog에 3개 탭이 있다 (이미지, Office, Markdown)."""
     from app.ui.dialogs.convert_dialog import ConvertDialog
     dlg = ConvertDialog(None)
     qtbot.addWidget(dlg)
-    assert dlg._tabs.count() >= 2
+    assert dlg._tabs.count() == 3
+
+
+def test_markdown_tab_exists(qtbot):
+    """Markdown 탭이 존재하고 레이블에 'Markdown'이 포함되어 있다."""
+    from app.ui.dialogs.convert_dialog import ConvertDialog
+    dlg = ConvertDialog(None)
+    qtbot.addWidget(dlg)
+    tab_labels = [dlg._tabs.tabText(i) for i in range(dlg._tabs.count())]
+    assert any("Markdown" in label for label in tab_labels)
 
 
 def test_progress_bar_exists(qtbot):
