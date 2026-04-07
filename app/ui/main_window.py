@@ -200,19 +200,39 @@ class MainWindow(QMainWindow):
         act_merge.triggered.connect(self._open_merge_dialog)
         page_menu.addAction(act_merge)
 
+        act_split = QAction("분할...(&S)", self)
+        act_split.triggered.connect(self._open_split_dialog)
+        page_menu.addAction(act_split)
+
         # ── 어노테이션 ────────────────────────────────────────────────────────
         annot_menu = menu_bar.addMenu("어노테이션(&A)")
         for tool, act in self._toolbar._tool_actions.items():
             annot_menu.addAction(act)
+        annot_menu.addSeparator()
+        act_stamp = annot_menu.addAction("스탬프...(&S)")
+        act_stamp.triggered.connect(self._open_stamp_dialog)
 
         # ── 도구 ──────────────────────────────────────────────────────────────
         tools_menu = menu_bar.addMenu("도구(&T)")
         act_convert = tools_menu.addAction("변환...(&C)")
         act_convert.setShortcut("Ctrl+Shift+C")
         act_convert.triggered.connect(self._open_convert_dialog)
+        tools_menu.addSeparator()
+        tools_menu.addAction("OCR 텍스트 인식...(&O)").triggered.connect(self._open_ocr_dialog)
+        tools_menu.addAction("최적화...(&P)").triggered.connect(self._open_optimize_dialog)
+        tools_menu.addAction("비교...(&D)").triggered.connect(self._open_compare_dialog)
+        tools_menu.addAction("워터마크...(&W)").triggered.connect(self._open_watermark_dialog)
+
+        # ── 보안 ──────────────────────────────────────────────────────────────
+        security_menu = menu_bar.addMenu("보안(&S)")
+        security_menu.addAction("암호 설정...(&E)").triggered.connect(self._open_security_dialog)
+        security_menu.addAction("디지털 서명...(&G)").triggered.connect(self._open_signature_dialog)
 
         # ── 도움말 ────────────────────────────────────────────────────────────
         help_menu = menu_bar.addMenu("도움말(&H)")
+        act_settings = help_menu.addAction("설정...(&S)")
+        act_settings.triggered.connect(self._open_settings_dialog)
+        help_menu.addSeparator()
         act_about = help_menu.addAction("정보(&A)...")
         act_about.triggered.connect(self._show_about)
 
@@ -707,6 +727,173 @@ class MainWindow(QMainWindow):
                 self._recent_menu.addAction("(없음)").setEnabled(False)
         except Exception:
             self._recent_menu.addAction("(없음)").setEnabled(False)
+
+    # ── 분할 ─────────────────────────────────────────────────────────────────
+
+    def _open_split_dialog(self) -> None:
+        if not self._doc.is_open:
+            return
+        from app.ui.dialogs.split_dialog import SplitDialog
+        dlg = SplitDialog(self, page_count=self._doc.page_count)
+        if dlg.exec() != SplitDialog.DialogCode.Accepted:
+            return
+        out_dir = QFileDialog.getExistingDirectory(self, "분할 결과 저장 폴더")
+        if not out_dir:
+            return
+        try:
+            from app.core.merger import split_pdf
+            kwargs = {}
+            if dlg.split_mode() == "bookmark":
+                kwargs["by_bookmarks"] = True
+            else:
+                kwargs["pages_per_split"] = dlg.pages_per_split()
+            files = split_pdf(self._doc.path, out_dir, **kwargs)
+            self._status_bar.showMessage(f"분할 완료: {len(files)}개 파일", 3000)
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"분할 실패:\n{e}")
+
+    # ── 스탬프 ────────────────────────────────────────────────────────────────
+
+    def _open_stamp_dialog(self) -> None:
+        if not self._doc.is_open:
+            return
+        from app.ui.dialogs.stamp_dialog import StampDialog
+        import fitz
+        dlg = StampDialog(self)
+        if dlg.exec() != StampDialog.DialogCode.Accepted:
+            return
+        page = self._doc.raw[self._viewer.current_page]
+        if dlg.is_text_stamp():
+            from app.core.stamp import add_text_stamp
+            center = fitz.Point(page.rect.width / 2, page.rect.height / 2)
+            add_text_stamp(page, center, dlg.stamp_text(),
+                           fontsize=dlg.fontsize(), rotate=dlg.rotation(),
+                           opacity=dlg.opacity())
+        elif dlg.image_path():
+            from app.core.stamp import add_image_stamp
+            add_image_stamp(page, fitz.Rect(100, 100, 300, 300), dlg.image_path())
+        self._viewer.refresh_page()
+        self._page_panel.reload_page(self._viewer.current_page)
+        self._status_bar.showMessage("스탬프 추가됨", 2000)
+
+    # ── OCR ────────────────────────────────────────────────────────────────────
+
+    def _open_ocr_dialog(self) -> None:
+        if not self._doc.is_open:
+            return
+        from app.ui.dialogs.ocr_dialog import OcrDialog
+        dlg = OcrDialog(self, page_count=self._doc.page_count)
+        if dlg.exec() != OcrDialog.DialogCode.Accepted:
+            return
+        try:
+            from app.core.ocr_engine import add_ocr_layer
+            out_path, _ = QFileDialog.getSaveFileName(self, "OCR 결과 저장", "", "PDF (*.pdf)")
+            if out_path:
+                add_ocr_layer(self._doc.path, out_path, lang=dlg.language(), dpi=dlg.dpi())
+                self._status_bar.showMessage("OCR 완료", 3000)
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"OCR 실패:\n{e}")
+
+    # ── 최적화 ────────────────────────────────────────────────────────────────
+
+    def _open_optimize_dialog(self) -> None:
+        if not self._doc.is_open:
+            return
+        from app.ui.dialogs.optimize_dialog import OptimizeDialog
+        file_size = os.path.getsize(self._doc.path) if self._doc.path else 0
+        dlg = OptimizeDialog(self, current_size=file_size)
+        if dlg.exec() != OptimizeDialog.DialogCode.Accepted:
+            return
+        out_path, _ = QFileDialog.getSaveFileName(self, "최적화 결과 저장", "", "PDF (*.pdf)")
+        if not out_path:
+            return
+        try:
+            from app.core.optimizer import optimize_pdf
+            optimize_pdf(self._doc.path, out_path, preset=dlg.preset())
+            new_size = os.path.getsize(out_path)
+            self._status_bar.showMessage(f"최적화 완료: {new_size / 1024:.0f} KB", 3000)
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"최적화 실패:\n{e}")
+
+    # ── 비교 ──────────────────────────────────────────────────────────────────
+
+    def _open_compare_dialog(self) -> None:
+        from app.ui.dialogs.compare_dialog import CompareDialog
+        current = self._doc.path if self._doc.is_open else ""
+        CompareDialog(self, current_path=current).exec()
+
+    # ── 워터마크 ──────────────────────────────────────────────────────────────
+
+    def _open_watermark_dialog(self) -> None:
+        if not self._doc.is_open:
+            return
+        from app.ui.dialogs.watermark_dialog import WatermarkDialog
+        dlg = WatermarkDialog(self)
+        if dlg.exec() != WatermarkDialog.DialogCode.Accepted:
+            return
+        out_path, _ = QFileDialog.getSaveFileName(self, "결과 저장", "", "PDF (*.pdf)")
+        if not out_path:
+            return
+        try:
+            if dlg.current_tab() == 0:
+                from app.core.watermark import add_text_watermark
+                add_text_watermark(self._doc.path, out_path, dlg.watermark_text(),
+                                   opacity=dlg.opacity(), rotate=dlg.rotation(),
+                                   tile=dlg.is_tile())
+            else:
+                from app.core.watermark import add_header_footer
+                add_header_footer(self._doc.path, out_path, **dlg.header_footer_settings())
+            self._status_bar.showMessage("적용 완료", 3000)
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"실패:\n{e}")
+
+    # ── 보안 ──────────────────────────────────────────────────────────────────
+
+    def _open_security_dialog(self) -> None:
+        if not self._doc.is_open:
+            return
+        from app.ui.dialogs.security_dialog import SecurityDialog
+        dlg = SecurityDialog(self)
+        if dlg.exec() != SecurityDialog.DialogCode.Accepted:
+            return
+        out_path, _ = QFileDialog.getSaveFileName(self, "암호화 저장", "", "PDF (*.pdf)")
+        if not out_path:
+            return
+        try:
+            from app.core.security import encrypt_pdf
+            encrypt_pdf(self._doc.path, out_path,
+                        user_password=dlg.user_password(),
+                        owner_password=dlg.owner_password(),
+                        algorithm=dlg.algorithm(),
+                        permissions=dlg.permissions())
+            self._status_bar.showMessage("암호 설정 완료", 3000)
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"암호 설정 실패:\n{e}")
+
+    # ── 서명 ──────────────────────────────────────────────────────────────────
+
+    def _open_signature_dialog(self) -> None:
+        from app.ui.dialogs.signature_dialog import SignatureDialog
+        dlg = SignatureDialog(self)
+        if dlg.exec() != SignatureDialog.DialogCode.Accepted:
+            return
+        self._status_bar.showMessage("디지털 서명: pyHanko 통합 후 사용 가능", 3000)
+
+    # ── 설정 ──────────────────────────────────────────────────────────────────
+
+    def _open_settings_dialog(self) -> None:
+        try:
+            from app.services.settings import AppSettings
+            from app.ui.dialogs.settings_dialog import SettingsDialog
+            settings = AppSettings()
+            dlg = SettingsDialog(self, settings=settings)
+            if dlg.exec() == SettingsDialog.DialogCode.Accepted:
+                from app.services.theme import get_stylesheet
+                from PyQt6.QtWidgets import QApplication
+                QApplication.instance().setStyleSheet(get_stylesheet(dlg.theme()))
+                self._status_bar.showMessage("설정 저장됨", 2000)
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"설정 오류:\n{e}")
 
     # ── 닫기 ─────────────────────────────────────────────────────────────────
 
