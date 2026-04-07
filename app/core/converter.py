@@ -386,3 +386,100 @@ def convert_markdown_to_pdf(md_paths: list[str], output_path: str) -> str:
 
     # 2차: Python 폴백
     return _convert_markdown_fitz(md_text, output_path)
+
+
+# ── PDF → 이미지 내보내기 ──────────────────────────────────────────────────────
+
+def export_pages_to_images(
+    pdf_path: str,
+    output_dir: str,
+    *,
+    fmt: str = "png",
+    dpi: int = 150,
+    page_indices: list[int] | None = None,
+) -> list[str]:
+    """PDF 페이지를 이미지 파일로 내보내기.
+
+    Parameters
+    ----------
+    pdf_path : str
+        입력 PDF 파일 경로.
+    output_dir : str
+        출력 디렉토리.
+    fmt : str
+        출력 형식 ("png", "jpg", "tiff").
+    dpi : int
+        해상도.
+    page_indices : list[int] | None
+        내보낼 페이지 인덱스. None이면 전체.
+
+    Returns
+    -------
+    list[str]
+        생성된 이미지 파일 경로 목록.
+    """
+    import fitz as fitz_mod
+
+    doc = fitz_mod.open(pdf_path)
+    stem = Path(pdf_path).stem
+    zoom = dpi / 72.0
+    mat = fitz_mod.Matrix(zoom, zoom)
+
+    indices = page_indices or list(range(len(doc)))
+    files: list[str] = []
+
+    for idx in indices:
+        page = doc[idx]
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+
+        ext = fmt.lower()
+        if ext == "jpg":
+            ext_save = "jpeg"
+        else:
+            ext_save = ext
+
+        filename = f"{stem}_page{idx + 1}.{fmt.lower()}"
+        filepath = os.path.join(output_dir, filename)
+
+        if ext_save == "jpeg":
+            pix.save(filepath, output=ext_save)
+        else:
+            pix.save(filepath)
+
+        files.append(filepath)
+
+    doc.close()
+    return files
+
+
+# ── PDF → 텍스트 내보내기 ──────────────────────────────────────────────────────
+
+def export_pdf_to_text(
+    pdf_path: str,
+    output_path: str,
+    *,
+    page_indices: list[int] | None = None,
+) -> str:
+    """PDF에서 텍스트를 추출하여 파일로 저장.
+
+    Returns
+    -------
+    str
+        출력 파일 경로.
+    """
+    import fitz as fitz_mod
+
+    doc = fitz_mod.open(pdf_path)
+    indices = page_indices or list(range(len(doc)))
+
+    texts: list[str] = []
+    for idx in indices:
+        page = doc[idx]
+        texts.append(page.get_text())
+
+    doc.close()
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n\n".join(texts))
+
+    return output_path

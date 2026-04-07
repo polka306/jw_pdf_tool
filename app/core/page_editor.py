@@ -34,6 +34,31 @@ def extract_pages(
     new_doc.close()
 
 
+def rotate_page(doc: fitz.Document, page_idx: int, degrees: int) -> None:
+    """페이지를 지정 각도만큼 회전합니다.
+
+    Parameters
+    ----------
+    degrees : int
+        회전 각도. 90, 180, 270 또는 -90, -180, -270.
+    """
+    page = doc[page_idx]
+    new_rotation = (page.rotation + degrees) % 360
+    page.set_rotation(new_rotation)
+
+
+def crop_page(doc: fitz.Document, page_idx: int, rect: fitz.Rect) -> None:
+    """페이지의 CropBox를 설정합니다. MediaBox는 보존."""
+    page = doc[page_idx]
+    page.set_cropbox(rect)
+
+
+def reset_cropbox(doc: fitz.Document, page_idx: int) -> None:
+    """CropBox를 MediaBox로 리셋합니다."""
+    page = doc[page_idx]
+    page.set_cropbox(page.mediabox)
+
+
 def insert_pages_from_file(
     doc: fitz.Document,
     source_path: str,
