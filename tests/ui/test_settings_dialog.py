@@ -10,10 +10,39 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 class TestSettingsDialogUI:
 
-    # TC-420 ~ TC-423: 설정 다이얼로그 (skip — 다이얼로그 후속)
-    @pytest.mark.parametrize("tc", [420, 421, 422, 423])
-    def test_tc_settings_dialog(self, tc):
-        pytest.skip(f"TC-{tc}: SettingsDialog 후속 구현")
+    # TC-420: 기본 PDF 뷰어 체크박스
+    def test_tc420_default_viewer(self, qtbot):
+        from app.ui.dialogs.settings_dialog import SettingsDialog
+        dlg = SettingsDialog()
+        qtbot.addWidget(dlg)
+        assert dlg._chk_default_viewer is not None
+
+    # TC-421: 트레이 상주 체크박스
+    def test_tc421_tray_checkbox(self, qtbot):
+        from app.ui.dialogs.settings_dialog import SettingsDialog
+        dlg = SettingsDialog()
+        qtbot.addWidget(dlg)
+        dlg._chk_tray.setChecked(True)
+        assert dlg.tray_enabled()
+
+    # TC-422: 테마 선택
+    def test_tc422_theme_selection(self, qtbot):
+        from app.ui.dialogs.settings_dialog import SettingsDialog
+        dlg = SettingsDialog()
+        qtbot.addWidget(dlg)
+        dlg._combo_theme.setCurrentIndex(1)
+        assert dlg.theme() == "light"
+
+    # TC-423: 설정 변경 반영
+    def test_tc423_settings_apply(self, qtbot, tmp_path):
+        from app.services.settings import AppSettings
+        from app.ui.dialogs.settings_dialog import SettingsDialog
+        s = AppSettings(str(tmp_path / "test.ini"))
+        dlg = SettingsDialog(settings=s)
+        qtbot.addWidget(dlg)
+        dlg._combo_theme.setCurrentIndex(1)
+        dlg._save_and_accept()
+        assert s.get("theme") == "light"
 
 
 class TestMainWindowTheme:

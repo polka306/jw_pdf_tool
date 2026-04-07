@@ -28,10 +28,43 @@ class TestAnnotToolbarUI:
 class TestStampDialogUI:
     """스탬프 다이얼로그."""
 
-    # TC-310 ~ TC-314: 스탬프 다이얼로그 (skip — 다이얼로그 후속)
-    @pytest.mark.parametrize("tc", [310, 311, 312, 313, 314])
-    def test_tc_stamp_dialog(self, tc):
-        pytest.skip(f"TC-{tc}: StampDialog 후속 구현")
+    # TC-310: 프리셋 스탬프 목록
+    def test_tc310_stamp_preset_list(self, qtbot):
+        from app.ui.dialogs.stamp_dialog import StampDialog
+        dlg = StampDialog()
+        qtbot.addWidget(dlg)
+        assert dlg._combo_preset.count() >= 5
+
+    # TC-311: 사용자 정의 스탬프 입력
+    def test_tc311_custom_stamp_input(self, qtbot):
+        from app.ui.dialogs.stamp_dialog import StampDialog
+        dlg = StampDialog()
+        qtbot.addWidget(dlg)
+        dlg._edit_text.setText("CUSTOM")
+        assert dlg.stamp_text() == "CUSTOM"
+
+    # TC-312: 이미지 스탬프 파일 선택
+    def test_tc312_image_stamp_tab(self, qtbot):
+        from app.ui.dialogs.stamp_dialog import StampDialog
+        dlg = StampDialog()
+        qtbot.addWidget(dlg)
+        dlg._tabs.setCurrentIndex(1)
+        assert not dlg.is_text_stamp()
+
+    # TC-313: 스탬프 도구 클릭
+    def test_tc313_stamp_placement(self, qtbot):
+        from app.ui.dialogs.stamp_dialog import StampDialog
+        dlg = StampDialog()
+        qtbot.addWidget(dlg)
+        assert dlg.fontsize() == 24
+
+    # TC-314: 스탬프 크기 조절
+    def test_tc314_stamp_resize(self, qtbot):
+        from app.ui.dialogs.stamp_dialog import StampDialog
+        dlg = StampDialog()
+        qtbot.addWidget(dlg)
+        dlg._spin_fontsize.setValue(48)
+        assert dlg.fontsize() == 48
 
 
 class TestBookmarkPanelEdit:

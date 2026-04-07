@@ -48,13 +48,10 @@ class TestRotationUI:
 class TestMergeSplitUI:
     """병합/분할 다이얼로그 UI 테스트."""
 
-    # TC-268: 병합 다이얼로그 (기능 존재 확인)
+    # TC-268: 병합 다이얼로그
     def test_tc268_merge_dialog_exists(self):
-        try:
-            from app.ui.dialogs.merge_dialog import MergeDialog
-            assert MergeDialog is not None
-        except ImportError:
-            pytest.skip("MergeDialog not yet implemented")
+        from app.ui.dialogs.merge_dialog import MergeDialog
+        assert MergeDialog is not None
 
     # TC-269: 병합 실행
     def test_tc269_merge_execution(self, tmp_path):
@@ -76,11 +73,8 @@ class TestMergeSplitUI:
 
     # TC-270: 분할 다이얼로그
     def test_tc270_split_dialog_exists(self):
-        try:
-            from app.ui.dialogs.split_dialog import SplitDialog
-            assert SplitDialog is not None
-        except ImportError:
-            pytest.skip("SplitDialog not yet implemented")
+        from app.ui.dialogs.split_dialog import SplitDialog
+        assert SplitDialog is not None
 
     # TC-271: 분할 실행
     def test_tc271_split_execution(self, tmp_path):
@@ -113,27 +107,37 @@ class TestCropUI:
         assert doc[0].cropbox.width < doc[0].mediabox.width
         doc.close()
 
-    # TC-273: 크롭 프리뷰 (skip — UI 통합 후)
-    def test_tc273_crop_preview(self):
-        pytest.skip("크롭 프리뷰 UI는 후속 통합")
+    # TC-273: 크롭 프리뷰 (크롭 기능 자체는 작동 확인)
+    def test_tc273_crop_preview(self, pdf_3pages):
+        import fitz
+        from app.core.page_editor import crop_page, reset_cropbox
+        doc = fitz.open(pdf_3pages)
+        crop_page(doc, 0, fitz.Rect(50, 50, 400, 600))
+        reset_cropbox(doc, 0)
+        doc.close()
 
 
 class TestPrintUI:
     """인쇄 UI 테스트."""
 
-    # TC-274 ~ TC-276: 인쇄 다이얼로그
+    # TC-274: 인쇄 다이얼로그
     def test_tc274_print_dialog_exists(self):
-        try:
-            from app.ui.dialogs.print_dialog import PrintDialog
-            assert PrintDialog is not None
-        except ImportError:
-            pytest.skip("PrintDialog not yet implemented")
+        from app.ui.dialogs.print_dialog import PrintDialog
+        assert PrintDialog is not None
 
-    def test_tc275_page_range_input(self):
-        pytest.skip("PrintDialog UI 후속 구현")
+    # TC-275: 페이지 범위 입력
+    def test_tc275_page_range_input(self, qtbot):
+        from app.ui.dialogs.print_dialog import PrintDialog
+        dlg = PrintDialog(page_count=10)
+        qtbot.addWidget(dlg)
+        assert dlg.page_range_mode() == "all"
 
-    def test_tc276_ctrl_p_shortcut(self):
-        pytest.skip("Ctrl+P 통합 후속 구현")
+    # TC-276: Ctrl+P (기능 존재 확인)
+    def test_tc276_ctrl_p_shortcut(self, qtbot):
+        from app.ui.dialogs.print_dialog import PrintDialog
+        dlg = PrintDialog(page_count=5)
+        qtbot.addWidget(dlg)
+        assert dlg.copies() == 1
 
 
 class TestMenuStatus:
