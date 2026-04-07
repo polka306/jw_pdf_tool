@@ -1,6 +1,6 @@
 [project]
 name = "pdf-editor"
-version = "1.0.0"
+version = "2.0.0"
 description = "개인용 PDF 편집 데스크탑 애플리케이션"
 requires-python = ">=3.11"
 dependencies = [
@@ -11,6 +11,11 @@ dependencies = [
     "reportlab>=4.0.0",
     "markdown>=3.5.0",
 ]
+
+[project.optional-dependencies]
+ocr = ["pytesseract>=0.3.10"]
+# winocr, pywin32 등은 Windows 전용이므로 선택적 설치
+system = ["pywin32>=306"]
 
 [dependency-groups]
 dev = [
