@@ -4,6 +4,58 @@
 
 ---
 
+## [v2.0.0] 2026-04-07 — 전체 재설계 (Phase 1~8 + UI 통합)
+
+### 신규 모듈 — app/core/ (10개)
+- `search_engine.py` — 텍스트 검색 (대소문자/전체단어/정규식), 북마크 파서, 텍스트 추출
+- `cli.py` — 명령줄 인자 파서 (argparse)
+- `merger.py` — PDF 병합 (북마크 유지, 페이지 범위), 분할 (N페이지/범위/북마크 기준)
+- `stamp.py` — 텍스트 스탬프 (프리셋/회전/투명도), 이미지 스탬프 (PNG/JPG)
+- `security.py` — PDF 암호화 (AES-256/128, 권한 비트), 복호화, 리댁션 (민감정보 영구 삭제)
+- `form_handler.py` — 양식 필드 읽기/쓰기/생성, JSON 내보내기
+- `ocr_engine.py` — Tesseract/Windows OCR 통합, 텍스트 레이어 삽입
+- `watermark.py` — 텍스트/이미지 워터마크, 머리글/바닥글 ({page}/{total} 변수), 베이츠 번호
+- `optimizer.py` — PDF 최적화 (garbage collection, web/print 프리셋)
+- `comparator.py` — PDF 텍스트 비교 (페이지별 diff, 페이지 수 차이 감지)
+
+### 신규 모듈 — app/ui/ (3개)
+- `render_engine.py` — QThreadPool 비동기 렌더링 엔진 (프리페치 ±3, 중복 제거, LRU 캐시)
+- `search_bar.py` — 검색바 위젯 (입력/다음/이전/옵션 체크박스)
+- `bookmark_panel.py` — 북마크 트리 패널 (QTreeWidget, 페이지 이동 시그널)
+
+### 신규 모듈 — app/services/ (7개)
+- `settings.py` — QSettings 기반 설정 관리 (최근 파일 10개, 키-값)
+- `file_association.py` — .pdf ProgID 등록/해제 (winreg, HKCU, dry_run)
+- `single_instance.py` — Named Mutex 기반 단일 인스턴스 관리
+- `tray_service.py` — QSystemTrayIcon 래퍼 (메뉴, 토글 시그널)
+- `updater.py` — 시맨틱 버전 비교
+- `theme.py` — 다크/라이트 테마 스타일시트
+- `print_service.py` — 가상 PDF 프린터 서비스, PrintSettings, 파일명 생성
+
+### 신규 모듈 — app/utils/ (3개)
+- `cache.py` — LRU 렌더 캐시 (줌×페이지×세대 키, 거리 기반 제거)
+- `platform.py` — Windows 한글 폰트 경로 감지
+- `async_worker.py` — QThread 기반 범용 비동기 워커
+
+### 확장
+- `app/core/pdf_document.py` — 페이지별 세대(generation) 카운터 (get/increment/reindex)
+- `app/core/page_editor.py` — `rotate_page()`, `crop_page()`, `reset_cropbox()` 추가
+- `app/core/converter.py` — `export_pages_to_images()` PNG/JPG, `export_pdf_to_text()` 추가
+- `app/core/annotator.py` — `add_highlight()`, `add_underline()`, `add_strikeout()`, `add_sticky_note()`, `add_ink()` 추가
+- `app/ui/main_window.py` — 최근 파일, Ctrl+F 검색, F11 전체화면, Ctrl+R 회전, Ctrl+Shift+M 병합, 사이드바 탭, 드래그앤드롭
+- `app/ui/pdf_viewer.py` — 보기 모드 (single/continuous/two_page), 텍스트 선택/복사 API
+- `main.py` — CLI 인자, 단일 인스턴스, 테마 로드
+
+### 문서
+- `docs/FEATURE_SPEC_v2.md` — v2.0.0 기능 정의서 (26개 섹션)
+- `docs/BUILD_PLAN_v2.md` — TDD 기반 구축 계획서 (Phase 1~8, 에이전트 검증 프로토콜)
+
+### 테스트
+- **신규 테스트 234개** (TC-167 ~ TC-454 + 벤치마크)
+- 전체 자동화 테스트 **506/572** PASS (66 skip — 미구현 다이얼로그 UI)
+
+---
+
 ## [기능] 2026-04-03 — Markdown → PDF 변환 기능 추가
 
 ### 추가
