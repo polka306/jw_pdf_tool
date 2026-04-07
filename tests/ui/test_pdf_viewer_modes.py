@@ -27,50 +27,28 @@ class TestPdfViewerModes:
     # TC-230: 연속 스크롤 모드
     def test_tc230_continuous_scroll_mode(self, viewer_with_doc):
         viewer, doc = viewer_with_doc
-
-        if hasattr(viewer, 'set_view_mode'):
-            viewer.set_view_mode("continuous")
-            assert viewer.view_mode == "continuous"
-        else:
-            pytest.skip("set_view_mode not yet implemented")
+        viewer.set_view_mode("continuous")
+        assert viewer.view_mode == "continuous"
 
     # TC-231: 2페이지 보기 모드
     def test_tc231_two_page_mode(self, viewer_with_doc):
         viewer, doc = viewer_with_doc
-
-        if hasattr(viewer, 'set_view_mode'):
-            viewer.set_view_mode("two_page")
-            assert viewer.view_mode == "two_page"
-        else:
-            pytest.skip("set_view_mode not yet implemented")
+        viewer.set_view_mode("two_page")
+        assert viewer.view_mode == "two_page"
 
     # TC-232: 단일 페이지 모드 복귀
     def test_tc232_single_page_mode(self, viewer_with_doc):
         viewer, doc = viewer_with_doc
-
-        if hasattr(viewer, 'set_view_mode'):
-            viewer.set_view_mode("continuous")
-            viewer.set_view_mode("single")
-            assert viewer.view_mode == "single"
-        else:
-            pytest.skip("set_view_mode not yet implemented")
+        viewer.set_view_mode("continuous")
+        viewer.set_view_mode("single")
+        assert viewer.view_mode == "single"
 
     # TC-233: 텍스트 드래그 선택
     def test_tc233_text_drag_selection(self, viewer_with_doc):
         viewer, doc = viewer_with_doc
-
-        if hasattr(viewer, 'get_selected_text'):
-            # 선택 없는 초기 상태
-            assert viewer.get_selected_text() == ""
-        else:
-            pytest.skip("get_selected_text not yet implemented")
+        assert viewer.get_selected_text() == ""
 
     # TC-234: Ctrl+C 텍스트 복사
     def test_tc234_text_copy(self, viewer_with_doc, qtbot):
         viewer, doc = viewer_with_doc
-
-        if hasattr(viewer, 'copy_selected_text'):
-            # 복사 시도 (빈 선택이어도 오류 없이)
-            viewer.copy_selected_text()
-        else:
-            pytest.skip("copy_selected_text not yet implemented")
+        viewer.copy_selected_text()  # 빈 선택이어도 오류 없이

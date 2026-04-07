@@ -41,22 +41,58 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._doc = PdfDocument()
         self._cmd_mgr = CommandManager()
+        self._is_fullscreen = False
+        self._recent_menu = None
+        self._search_bar = None
+        self._bookmark_panel = None
         self._setup_ui()
         self._connect_signals()
         self.setWindowTitle(f"{self.APP_TITLE} v{__version__}")
         self.resize(1200, 800)
+        self.setAcceptDrops(True)
 
     # ── UI 초기화 ─────────────────────────────────────────────────────────────
 
     def _setup_ui(self) -> None:
+        from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
+
         self._toolbar = MainToolBar(self)
         self.addToolBar(self._toolbar)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
-        self._page_panel = PagePanel(self._splitter)
-        self._viewer = PdfViewer(self._splitter)
-        self._splitter.addWidget(self._page_panel)
-        self._splitter.addWidget(self._viewer)
+
+        # 좌측: 썸네일 + 북마크 탭
+        self._side_tabs = QTabWidget()
+        self._page_panel = PagePanel()
+        self._side_tabs.addTab(self._page_panel, "썸네일")
+
+        try:
+            from app.ui.bookmark_panel import BookmarkPanel
+            self._bookmark_panel = BookmarkPanel()
+            self._side_tabs.addTab(self._bookmark_panel, "북마크")
+        except ImportError:
+            pass
+
+        self._splitter.addWidget(self._side_tabs)
+
+        # 우측: 뷰어 + 검색바
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
+
+        try:
+            from app.ui.search_bar import SearchBar
+            self._search_bar = SearchBar()
+            self._search_bar.hide()
+            right_layout.addWidget(self._search_bar)
+        except ImportError:
+            pass
+
+        self._viewer = PdfViewer()
+        right_layout.addWidget(self._viewer)
+
+        self._splitter.addWidget(right_widget)
         self._splitter.setStretchFactor(0, 0)
         self._splitter.setStretchFactor(1, 1)
         self.setCentralWidget(self._splitter)
@@ -87,6 +123,12 @@ class MainWindow(QMainWindow):
         act_save_as = file_menu.addAction("다른 이름으로 저장(&A)...")
         act_save_as.triggered.connect(self._save_as)
         file_menu.addSeparator()
+
+        # 최근 파일
+        self._recent_menu = file_menu.addMenu("최근 파일(&R)")
+        self._update_recent_menu()
+
+        file_menu.addSeparator()
         act_quit = file_menu.addAction("종료(&Q)")
         act_quit.triggered.connect(self.close)
 
@@ -110,6 +152,13 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self._toolbar._act_extract)
         edit_menu.addAction(self._toolbar._act_insert)
 
+        # ── 편집 추가: 검색 ──────────────────────────────────────────────────
+        edit_menu.addSeparator()
+        act_search = QAction("검색(&F)...", self)
+        act_search.setShortcut(QKeySequence("Ctrl+F"))
+        act_search.triggered.connect(self._toggle_search_bar)
+        edit_menu.addAction(act_search)
+
         # ── 보기 ──────────────────────────────────────────────────────────────
         view_menu = menu_bar.addMenu("보기(&V)")
         view_menu.addAction(self._toolbar._act_zoom_in)
@@ -126,6 +175,30 @@ class MainWindow(QMainWindow):
         act_next.setShortcut(QKeySequence("PgDown"))
         act_next.triggered.connect(lambda: self._viewer.goto_page(self._viewer.current_page + 1))
         view_menu.addAction(act_next)
+
+        view_menu.addSeparator()
+        act_fullscreen = QAction("전체 화면(&F)", self)
+        act_fullscreen.setShortcut(QKeySequence("F11"))
+        act_fullscreen.triggered.connect(self.toggle_fullscreen)
+        view_menu.addAction(act_fullscreen)
+
+        # ── 페이지 ────────────────────────────────────────────────────────────
+        page_menu = menu_bar.addMenu("페이지(&P)")
+        act_rotate_cw = QAction("시계방향 회전(&R)", self)
+        act_rotate_cw.setShortcut(QKeySequence("Ctrl+R"))
+        act_rotate_cw.triggered.connect(self._rotate_cw)
+        page_menu.addAction(act_rotate_cw)
+
+        act_rotate_ccw = QAction("반시계방향 회전(&L)", self)
+        act_rotate_ccw.setShortcut(QKeySequence("Ctrl+Shift+R"))
+        act_rotate_ccw.triggered.connect(self._rotate_ccw)
+        page_menu.addAction(act_rotate_ccw)
+
+        page_menu.addSeparator()
+        act_merge = QAction("병합...(&M)", self)
+        act_merge.setShortcut(QKeySequence("Ctrl+Shift+M"))
+        act_merge.triggered.connect(self._open_merge_dialog)
+        page_menu.addAction(act_merge)
 
         # ── 어노테이션 ────────────────────────────────────────────────────────
         annot_menu = menu_bar.addMenu("어노테이션(&A)")
@@ -207,6 +280,9 @@ class MainWindow(QMainWindow):
         self._update_undo_actions()
         # 초기 어노테이션 스타일 동기화
         self._sync_annot_style()
+        self._add_recent_file(path)
+        if self._bookmark_panel:
+            self._bookmark_panel.load_bookmarks(path)
 
     def _save_file(self) -> None:
         if not self._doc.is_open:
@@ -485,6 +561,154 @@ class MainWindow(QMainWindow):
     def _update_page_status(self, page_idx: int) -> None:
         total = self._doc.page_count if self._doc.is_open else 0
         self._lbl_page.setText(f"페이지: {page_idx + 1} / {total}")
+
+    # ── 전체 화면 ─────────────────────────────────────────────────────────────
+
+    def toggle_fullscreen(self) -> None:
+        """전체 화면 토글."""
+        if self._is_fullscreen:
+            self.showNormal()
+            self._toolbar.show()
+            self._side_tabs.show()
+            self._status_bar.show()
+            self.menuBar().show()
+            self._is_fullscreen = False
+        else:
+            self._toolbar.hide()
+            self._side_tabs.hide()
+            self._status_bar.hide()
+            self.menuBar().hide()
+            self.showFullScreen()
+            self._is_fullscreen = True
+
+    # ── 드래그 앤 드롭 ────────────────────────────────────────────────────────
+
+    def dragEnterEvent(self, event) -> None:
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if any(u.toLocalFile().lower().endswith(".pdf") for u in urls):
+                event.acceptProposedAction()
+
+    def dropEvent(self, event) -> None:
+        urls = event.mimeData().urls()
+        for url in urls:
+            path = url.toLocalFile()
+            if path.lower().endswith(".pdf"):
+                self.handle_drop_file(path)
+                break
+
+    def handle_drop_file(self, path: str) -> None:
+        """드래그앤드롭으로 파일 열기."""
+        try:
+            self._doc.open(path)
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"파일을 열 수 없습니다:\n{e}")
+            return
+        self._cmd_mgr.clear()
+        self._page_panel.load_document(self._doc)
+        self._viewer.set_document(self._doc)
+        self._toolbar.set_document_loaded(True)
+        self._toolbar.set_tool_checked(AnnotationTool.SELECT)
+        self._update_title(path)
+        self._update_page_status(0)
+        self._toolbar.update_zoom_display(self._viewer.zoom)
+        self._lbl_file.setText(os.path.basename(path))
+        self._update_undo_actions()
+        self._sync_annot_style()
+        self._add_recent_file(path)
+        if self._bookmark_panel:
+            self._bookmark_panel.load_bookmarks(path)
+
+    # ── 검색 ─────────────────────────────────────────────────────────────────
+
+    def _toggle_search_bar(self) -> None:
+        """검색바 표시/숨기기 토글."""
+        if self._search_bar is None:
+            return
+        if self._search_bar.isVisible():
+            self._search_bar.close_bar()
+        else:
+            self._search_bar.show()
+            self._search_bar.focus_input()
+
+    # ── 페이지 회전 ───────────────────────────────────────────────────────────
+
+    def _rotate_cw(self) -> None:
+        """현재 페이지 시계방향 90° 회전."""
+        if not self._doc.is_open:
+            return
+        page_editor.rotate_page(self._doc.raw, self._viewer.current_page, 90)
+        self._refresh_after_edit()
+        self._status_bar.showMessage("시계방향 90° 회전", 2000)
+
+    def _rotate_ccw(self) -> None:
+        """현재 페이지 반시계방향 90° 회전."""
+        if not self._doc.is_open:
+            return
+        page_editor.rotate_page(self._doc.raw, self._viewer.current_page, -90)
+        self._refresh_after_edit()
+        self._status_bar.showMessage("반시계방향 90° 회전", 2000)
+
+    # ── 병합 ─────────────────────────────────────────────────────────────────
+
+    def _open_merge_dialog(self) -> None:
+        """PDF 병합 — 간단 구현 (파일 선택 → 병합)."""
+        paths, _ = QFileDialog.getOpenFileNames(
+            self, "병합할 PDF 파일 선택", "", "PDF 파일 (*.pdf)"
+        )
+        if not paths or len(paths) < 2:
+            return
+        out_path, _ = QFileDialog.getSaveFileName(
+            self, "병합 결과 저장", "", "PDF 파일 (*.pdf)"
+        )
+        if not out_path:
+            return
+        if not out_path.lower().endswith(".pdf"):
+            out_path += ".pdf"
+        try:
+            from app.core.merger import merge_pdfs
+            merge_pdfs(paths, out_path)
+            self._status_bar.showMessage(f"병합 완료: {os.path.basename(out_path)}", 3000)
+            reply = QMessageBox.question(
+                self, "병합 완료", "병합된 PDF를 열겠습니까?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self.handle_drop_file(out_path)
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"병합 실패:\n{e}")
+
+    # ── 최근 파일 ─────────────────────────────────────────────────────────────
+
+    def _add_recent_file(self, path: str) -> None:
+        """최근 파일 목록에 추가."""
+        try:
+            from app.services.settings import AppSettings
+            settings = AppSettings()
+            settings.add_recent_file(path)
+            self._update_recent_menu()
+        except Exception:
+            pass
+
+    def _update_recent_menu(self) -> None:
+        """최근 파일 메뉴 갱신."""
+        if self._recent_menu is None:
+            return
+        self._recent_menu.clear()
+        try:
+            from app.services.settings import AppSettings
+            settings = AppSettings()
+            recent = settings.get_recent_files()
+            for path in recent[:10]:
+                act = self._recent_menu.addAction(os.path.basename(path))
+                act.setData(path)
+                act.triggered.connect(lambda checked, p=path: self.handle_drop_file(p))
+            if not recent:
+                self._recent_menu.addAction("(없음)").setEnabled(False)
+        except Exception:
+            self._recent_menu.addAction("(없음)").setEnabled(False)
+
+    # ── 닫기 ─────────────────────────────────────────────────────────────────
 
     def closeEvent(self, event) -> None:
         self._doc.close()

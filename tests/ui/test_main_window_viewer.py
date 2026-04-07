@@ -28,35 +28,23 @@ class TestMainWindowViewer:
 
     # TC-235: F11 전체 화면 진입
     def test_tc235_fullscreen_enter(self, win):
-        if hasattr(win, 'toggle_fullscreen'):
-            win.toggle_fullscreen()
-            assert win.isFullScreen() or True  # offscreen에서 제한적
-        else:
-            pytest.skip("toggle_fullscreen not yet implemented")
+        win.toggle_fullscreen()
+        assert win._is_fullscreen is True
 
     # TC-236: ESC 전체 화면 탈출
     def test_tc236_fullscreen_exit(self, win):
-        if hasattr(win, 'toggle_fullscreen'):
-            win.toggle_fullscreen()  # 진입
-            win.toggle_fullscreen()  # 탈출
-            assert not win.isFullScreen() or True
-        else:
-            pytest.skip("toggle_fullscreen not yet implemented")
+        win.toggle_fullscreen()  # 진입
+        win.toggle_fullscreen()  # 탈출
+        assert win._is_fullscreen is False
 
     # TC-237: 드래그앤드롭 PDF 열기
     def test_tc237_drag_drop_open(self, win, pdf_5pages):
-        if hasattr(win, 'handle_drop_file'):
-            win.handle_drop_file(pdf_5pages)
-            assert win._doc.page_count == 5
-        else:
-            pytest.skip("handle_drop_file not yet implemented")
+        win.handle_drop_file(pdf_5pages)
+        assert win._doc.page_count == 5
 
     # TC-238: 최근 파일 메뉴 표시
     def test_tc238_recent_files_menu(self, win):
-        if hasattr(win, '_recent_menu'):
-            assert win._recent_menu is not None
-        else:
-            pytest.skip("_recent_menu not yet implemented")
+        assert win._recent_menu is not None
 
     # TC-239: 설정 저장/로드
     def test_tc239_settings_persistence(self, tmp_path):

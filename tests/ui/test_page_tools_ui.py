@@ -36,19 +36,13 @@ class TestRotationUI:
         rotate_page(win._doc.raw, 0, 90)
         assert win._doc.raw[0].rotation == (original + 90) % 360
 
-    # TC-266: Ctrl+R 단축키 (기능 존재 확인)
+    # TC-266: Ctrl+R 단축키
     def test_tc266_rotate_shortcut(self, win):
-        if hasattr(win, '_rotate_cw'):
-            win._rotate_cw()
-        else:
-            pytest.skip("_rotate_cw not yet integrated")
+        win._rotate_cw()
 
     # TC-267: Ctrl+Shift+R 반시계
     def test_tc267_rotate_ccw_shortcut(self, win):
-        if hasattr(win, '_rotate_ccw'):
-            win._rotate_ccw()
-        else:
-            pytest.skip("_rotate_ccw not yet integrated")
+        win._rotate_ccw()
 
 
 class TestMergeSplitUI:

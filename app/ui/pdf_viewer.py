@@ -60,6 +60,9 @@ class PdfViewer(QGraphicsView):
         self._drag_start: QPointF | None = None
         self._preview_item: QGraphicsItem | None = None
 
+        self._view_mode: str = "single"  # "single", "continuous", "two_page"
+        self._selected_text: str = ""
+
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -118,6 +121,29 @@ class PdfViewer(QGraphicsView):
         view_w = self.viewport().width() - 20
         view_h = self.viewport().height() - 20
         self.set_zoom(min(view_w / w, view_h / h))
+
+    # ── 보기 모드 ─────────────────────────────────────────────────────────────
+
+    @property
+    def view_mode(self) -> str:
+        return self._view_mode
+
+    def set_view_mode(self, mode: str) -> None:
+        """보기 모드 변경: "single", "continuous", "two_page"."""
+        self._view_mode = mode
+        self._render_current()
+
+    # ── 텍스트 선택/복사 ──────────────────────────────────────────────────────
+
+    def get_selected_text(self) -> str:
+        """현재 선택된 텍스트 반환."""
+        return self._selected_text
+
+    def copy_selected_text(self) -> None:
+        """선택된 텍스트를 클립보드에 복사."""
+        from PyQt6.QtWidgets import QApplication
+        if self._selected_text:
+            QApplication.clipboard().setText(self._selected_text)
 
     # ── 어노테이션 도구 ───────────────────────────────────────────────────────
 
