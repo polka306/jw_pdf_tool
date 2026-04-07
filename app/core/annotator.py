@@ -152,3 +152,93 @@ def add_text(
         kwargs["fontfile"] = fontfile
 
     page.insert_text(**kwargs)
+
+
+# ── 하이라이트/밑줄/취소선 (PDF 표준 어노테이션) ────────────────────────────────
+
+def add_highlight(
+    page: fitz.Page,
+    quads,
+    *,
+    color: tuple[float, float, float] = (1.0, 1.0, 0.0),
+) -> fitz.Annot:
+    """텍스트 하이라이트 어노테이션 추가. quads는 Rect 또는 Quad."""
+    annot = page.add_highlight_annot(quads)
+    annot.set_colors(stroke=color)
+    annot.update()
+    return annot
+
+
+def add_underline(
+    page: fitz.Page,
+    quads,
+    *,
+    color: tuple[float, float, float] = (0.0, 0.0, 1.0),
+) -> fitz.Annot:
+    """텍스트 밑줄 어노테이션 추가. quads는 Rect 또는 Quad."""
+    annot = page.add_underline_annot(quads)
+    annot.set_colors(stroke=color)
+    annot.update()
+    return annot
+
+
+def add_strikeout(
+    page: fitz.Page,
+    quads,
+    *,
+    color: tuple[float, float, float] = (1.0, 0.0, 0.0),
+) -> fitz.Annot:
+    """텍스트 취소선 어노테이션 추가. quads는 Rect 또는 Quad."""
+    annot = page.add_strikeout_annot(quads)
+    annot.set_colors(stroke=color)
+    annot.update()
+    return annot
+
+
+# ── 스티키 노트 (Text 어노테이션) ───────────────────────────────────────────
+
+def add_sticky_note(
+    page: fitz.Page,
+    point: fitz.Point,
+    content: str,
+    *,
+    icon: str = "Note",
+) -> fitz.Annot:
+    """스티키 노트(팝업 메모) 어노테이션 추가."""
+    annot = page.add_text_annot(point, content, icon=icon)
+    annot.update()
+    return annot
+
+
+# ── 자유형 그리기 (Ink 어노테이션) ───────────────────────────────────────────
+
+def add_ink(
+    page: fitz.Page,
+    points: list[tuple[float, float]],
+    style: AnnotationStyle,
+    *,
+    min_length: float = 3.0,
+) -> fitz.Annot | None:
+    """Ink(자유형 그리기) 어노테이션 추가.
+
+    경로 길이가 min_length 미만이면 None 반환 (오클릭 방지).
+    """
+    if len(points) < 2:
+        return None
+
+    # 경로 총 길이 계산
+    total = 0.0
+    for i in range(1, len(points)):
+        dx = points[i][0] - points[i - 1][0]
+        dy = points[i][1] - points[i - 1][1]
+        total += (dx * dx + dy * dy) ** 0.5
+
+    if total < min_length:
+        return None
+
+    # (x, y) 튜플 리스트로 변환 — add_ink_annot은 seq of seq of float pairs 요구
+    annot = page.add_ink_annot([points])
+    annot.set_colors(stroke=style.color)
+    annot.set_border(width=style.line_width)
+    annot.update()
+    return annot
