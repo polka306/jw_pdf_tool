@@ -93,3 +93,27 @@ def decrypt_pdf(
 
     doc.save(output_path, encryption=fitz.PDF_ENCRYPT_NONE)
     doc.close()
+
+
+# ── 리댁션 ────────────────────────────────────────────────────────────────────
+
+def redact_area(
+    input_path: str,
+    output_path: str,
+    page_idx: int,
+    rect: fitz.Rect,
+) -> None:
+    """PDF 페이지의 지정 영역을 영구 삭제(리댁션).
+
+    해당 영역의 텍스트/이미지가 완전히 제거되고 검은 사각형으로 대체됩니다.
+    """
+    doc = fitz.open(input_path)
+    page = doc[page_idx]
+
+    # 리댁션 어노테이션 추가
+    annot = page.add_redact_annot(rect, fill=(0, 0, 0))
+    # 리댁션 적용 (영구 삭제)
+    page.apply_redactions()
+
+    doc.save(output_path, garbage=4, deflate=True)
+    doc.close()
