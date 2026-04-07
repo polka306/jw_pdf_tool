@@ -11,6 +11,7 @@ class PdfDocument:
     def __init__(self) -> None:
         self._doc: fitz.Document | None = None
         self._path: str | None = None
+        self._generations: dict[int, int] = {}  # 페이지별 세대 카운터
 
     # ------------------------------------------------------------------
     # 열기 / 닫기
@@ -22,6 +23,7 @@ class PdfDocument:
             self._doc.close()
         self._doc = fitz.open(path)
         self._path = path
+        self._generations = {i: 0 for i in range(len(self._doc))}
 
     def close(self) -> None:
         """열린 문서를 닫습니다."""
@@ -111,6 +113,30 @@ class PdfDocument:
         """임시 경로에 저장합니다 (내부 경로 변경 없음)."""
         self._require_open()
         self._doc.save(temp_path, garbage=4, deflate=True)
+
+    # ------------------------------------------------------------------
+    # 세대 카운터
+    # ------------------------------------------------------------------
+
+    def get_generation(self, page_idx: int) -> int:
+        """페이지의 현재 세대 카운터 값."""
+        return self._generations.get(page_idx, 0)
+
+    def increment_generation(self, page_idx: int) -> None:
+        """페이지 세대 카운터를 1 증가."""
+        self._generations[page_idx] = self._generations.get(page_idx, 0) + 1
+
+    def reindex_generations_after_delete(self, deleted_indices: list[int]) -> None:
+        """페이지 삭제 후 세대 카운터 인덱스를 재매핑."""
+        deleted_set = set(deleted_indices)
+        old_gens = self._generations.copy()
+        self._generations.clear()
+
+        new_idx = 0
+        for old_idx in sorted(old_gens.keys()):
+            if old_idx not in deleted_set:
+                self._generations[new_idx] = old_gens[old_idx]
+                new_idx += 1
 
     # ------------------------------------------------------------------
     # 내부 유틸
