@@ -126,3 +126,27 @@ def export_form_data(
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+# ── 가져오기 ──────────────────────────────────────────────────────────────────
+
+def import_form_data(
+    input_path: str,
+    output_path: str,
+    json_path: str,
+) -> None:
+    """JSON 파일에서 양식 데이터를 읽어 PDF 필드에 반영."""
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    doc = fitz.open(input_path)
+
+    for page in doc:
+        for widget in page.widgets():
+            name = widget.field_name
+            if name and name in data:
+                widget.field_value = str(data[name])
+                widget.update()
+
+    doc.save(output_path)
+    doc.close()

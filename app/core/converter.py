@@ -397,8 +397,11 @@ def export_pages_to_images(
     fmt: str = "png",
     dpi: int = 150,
     page_indices: list[int] | None = None,
+    color_mode: str = "color",
 ) -> list[str]:
     """PDF 페이지를 이미지 파일로 내보내기.
+
+    color_mode: "color", "grayscale", "bw"
 
     Parameters
     ----------
@@ -430,7 +433,21 @@ def export_pages_to_images(
 
     for idx in indices:
         page = doc[idx]
-        pix = page.get_pixmap(matrix=mat, alpha=False)
+        if color_mode == "grayscale":
+            pix = page.get_pixmap(matrix=mat, alpha=False, colorspace=fitz_mod.csGRAY)
+        else:
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+
+        # 흑백 변환 (1bit)
+        if color_mode == "bw":
+            from PIL import Image as PILImage
+            import io
+            img = PILImage.open(io.BytesIO(pix.tobytes("png")))
+            img = img.convert("1")  # 1-bit black & white
+            bw_path = os.path.join(output_dir, f"{stem}_page{idx + 1}.{fmt.lower()}")
+            img.save(bw_path)
+            files.append(bw_path)
+            continue
 
         ext = fmt.lower()
         if ext == "jpg":
@@ -459,13 +476,14 @@ def export_pdf_to_text(
     output_path: str,
     *,
     page_indices: list[int] | None = None,
+    output_format: str = "txt",
 ) -> str:
     """PDF에서 텍스트를 추출하여 파일로 저장.
 
-    Returns
-    -------
-    str
-        출력 파일 경로.
+    Parameters
+    ----------
+    output_format : str
+        "txt" 또는 "docx".
     """
     import fitz as fitz_mod
 
@@ -479,7 +497,52 @@ def export_pdf_to_text(
 
     doc.close()
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("\n\n".join(texts))
+    if output_format == "docx":
+        _write_docx(output_path, texts)
+    else:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("\n\n".join(texts))
 
     return output_path
+
+
+def _write_docx(output_path: str, texts: list[str]) -> None:
+    """텍스트를 간단한 DOCX 파일로 저장 (python-docx 없이 ZIP 기반)."""
+    import zipfile
+    from xml.etree.ElementTree import Element, SubElement, tostring
+
+    # DOCX는 ZIP 기반 XML
+    NSMAP = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+    body = Element(f"{{{NSMAP}}}body")
+    document = Element(f"{{{NSMAP}}}document")
+    document.append(body)
+
+    for text in texts:
+        for line in text.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+            p = SubElement(body, f"{{{NSMAP}}}p")
+            r = SubElement(p, f"{{{NSMAP}}}r")
+            t = SubElement(r, f"{{{NSMAP}}}t")
+            t.text = line
+
+    doc_xml = b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + tostring(document)
+
+    content_types = b"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>"""
+
+    rels = b"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>"""
+
+    with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types)
+        zf.writestr("_rels/.rels", rels)
+        zf.writestr("word/document.xml", doc_xml)

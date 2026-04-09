@@ -187,3 +187,49 @@ def extract_text_in_rect(
     text = page.get_textbox(rect)
     doc.close()
     return text
+
+
+# ── 자동 목차 생성 ─────────────────────────────────────────────────────────────
+
+def auto_generate_toc(
+    pdf_path: str,
+    *,
+    min_fontsize: float = 16.0,
+) -> list[list]:
+    """PDF에서 큰 폰트 텍스트를 감지하여 TOC(목차) 자동 생성.
+
+    Returns
+    -------
+    list[list]
+        [[level, title, page_number], ...] — fitz.set_toc() 호환 형식.
+    """
+    doc = fitz.open(pdf_path)
+    toc: list[list] = []
+
+    for page_idx in range(len(doc)):
+        page = doc[page_idx]
+        blocks = page.get_text("dict")["blocks"]
+
+        for block in blocks:
+            if block["type"] != 0:  # 텍스트 블록만
+                continue
+            for line in block["lines"]:
+                for span in line["spans"]:
+                    if span["size"] >= min_fontsize:
+                        text = span["text"].strip()
+                        if text and len(text) > 1:
+                            # 레벨: 폰트 크기에 따라
+                            if span["size"] >= 22:
+                                level = 1
+                            elif span["size"] >= 18:
+                                level = 2
+                            else:
+                                level = 3
+                            toc.append([level, text, page_idx + 1])
+                            break  # 한 줄에서 하나만
+                else:
+                    continue
+                break  # 한 블록에서 하나만
+
+    doc.close()
+    return toc
