@@ -45,6 +45,8 @@ class MainWindow(QMainWindow):
         self._recent_menu = None
         self._search_bar = None
         self._bookmark_panel = None
+        self._search_results: list = []
+        self._search_idx: int = -1
         self._setup_ui()
         self._connect_signals()
         self.setWindowTitle(f"{self.APP_TITLE} v{__version__}")
@@ -270,6 +272,16 @@ class MainWindow(QMainWindow):
         self._toolbar.text_bold_changed.connect(self._on_text_bold_changed)
         self._toolbar.text_italic_changed.connect(self._on_text_italic_changed)
         self._viewer.annotation_requested.connect(self._on_annotation_requested)
+
+        # 검색바
+        if self._search_bar:
+            self._search_bar.search_requested.connect(self._on_search_requested)
+            self._search_bar.next_requested.connect(self._on_search_next)
+            self._search_bar.prev_requested.connect(self._on_search_prev)
+
+        # 북마크 패널
+        if self._bookmark_panel:
+            self._bookmark_panel.page_requested.connect(self._viewer.goto_page)
 
         # 변환
         self._toolbar.convert_requested.connect(self._open_convert_dialog)
@@ -647,9 +659,53 @@ class MainWindow(QMainWindow):
             return
         if self._search_bar.isVisible():
             self._search_bar.close_bar()
+            self._search_results = []
+            self._search_idx = -1
         else:
             self._search_bar.show()
             self._search_bar.focus_input()
+
+    def _on_search_requested(self, text: str) -> None:
+        """검색 실행."""
+        if not self._doc.is_open or not text:
+            return
+        try:
+            from app.core.search_engine import SearchEngine
+            engine = SearchEngine(self._doc.path)
+            self._search_results = engine.search(
+                text,
+                case_sensitive=self._search_bar.is_case_sensitive(),
+                whole_word=self._search_bar.is_whole_word(),
+                regex=self._search_bar.is_regex(),
+            )
+            self._search_idx = 0 if self._search_results else -1
+            self._search_bar.set_result_count(len(self._search_results), max(0, self._search_idx))
+            if self._search_results:
+                self._goto_search_result(self._search_idx)
+            self._status_bar.showMessage(f"검색: {len(self._search_results)}개 매칭", 2000)
+        except Exception as e:
+            self._status_bar.showMessage(f"검색 오류: {e}", 3000)
+
+    def _on_search_next(self) -> None:
+        """다음 검색 결과."""
+        if not self._search_results:
+            return
+        self._search_idx = (self._search_idx + 1) % len(self._search_results)
+        self._search_bar.set_result_count(len(self._search_results), self._search_idx)
+        self._goto_search_result(self._search_idx)
+
+    def _on_search_prev(self) -> None:
+        """이전 검색 결과."""
+        if not self._search_results:
+            return
+        self._search_idx = (self._search_idx - 1) % len(self._search_results)
+        self._search_bar.set_result_count(len(self._search_results), self._search_idx)
+        self._goto_search_result(self._search_idx)
+
+    def _goto_search_result(self, idx: int) -> None:
+        """검색 결과로 이동."""
+        result = self._search_results[idx]
+        self._viewer.goto_page(result.page_idx)
 
     # ── 페이지 회전 ───────────────────────────────────────────────────────────
 
