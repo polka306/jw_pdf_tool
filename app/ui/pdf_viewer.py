@@ -54,6 +54,11 @@ class PdfViewer(QGraphicsView):
         self._current_page: int = 0
         self._zoom: float = 1.5
 
+        # ── 비동기 렌더링 엔진 ────────────────────────────────────────────────
+        self._render_engine = None
+        self._zoom_debounce_timer = None
+        self._last_pixmap: QPixmap | None = None  # 즉시 스케일용
+
         # ── 어노테이션 상태 ───────────────────────────────────────────────────
         self._current_tool: AnnotationTool = AnnotationTool.SELECT
         self._annot_style: AnnotationStyle = AnnotationStyle()
@@ -71,17 +76,29 @@ class PdfViewer(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
+        # debounce 타이머 (줌 변경 시 150ms 후 정밀 렌더)
+        from PyQt6.QtCore import QTimer
+        self._zoom_debounce_timer = QTimer(self)
+        self._zoom_debounce_timer.setSingleShot(True)
+        self._zoom_debounce_timer.setInterval(150)
+        self._zoom_debounce_timer.timeout.connect(self._on_debounce_render)
+
     # ── 공개 API ──────────────────────────────────────────────────────────────
 
     def set_document(self, doc: PdfDocument) -> None:
         self._doc = doc
         self._current_page = 0
         self.set_tool(AnnotationTool.SELECT)
+        self._init_render_engine()
         self._render_current()
 
     def clear(self) -> None:
+        if self._render_engine:
+            self._render_engine.shutdown()
+            self._render_engine = None
         self._doc = None
         self._current_page = 0
+        self._last_pixmap = None
         self._scene.clear()
 
     def goto_page(self, page_idx: int) -> None:
@@ -104,9 +121,27 @@ class PdfViewer(QGraphicsView):
     # ── 줌 ───────────────────────────────────────────────────────────────────
 
     def set_zoom(self, zoom: float) -> None:
+        old_zoom = self._zoom
         self._zoom = max(self.MIN_ZOOM, min(self.MAX_ZOOM, zoom))
-        self._render_current()
         self.zoom_changed.emit(self._zoom)
+
+        # 즉시 스케일: 기존 pixmap을 확대/축소하여 표시 (빠름)
+        if self._last_pixmap and old_zoom > 0:
+            scale = self._zoom / old_zoom
+            scaled = self._last_pixmap.scaled(
+                int(self._last_pixmap.width() * scale),
+                int(self._last_pixmap.height() * scale),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.FastTransformation,
+            )
+            self._scene.clear()
+            self._preview_item = None
+            self._scene.addPixmap(scaled)
+            self._scene.setSceneRect(scaled.rect().toRectF())
+
+        # debounce: 150ms 후 정밀 렌더
+        if self._zoom_debounce_timer:
+            self._zoom_debounce_timer.start()
 
     def zoom_in(self) -> None:
         self.set_zoom(self._zoom + self.ZOOM_STEP)
@@ -340,16 +375,81 @@ class PdfViewer(QGraphicsView):
 
     def refresh_page(self) -> None:
         """현재 페이지를 재렌더링합니다 (Undo/Redo 후 호출)."""
+        # 세대 카운터 증가 → 캐시 무효화
+        if self._doc and hasattr(self._doc, 'increment_generation'):
+            self._doc.increment_generation(self._current_page)
+            if self._render_engine:
+                gen = self._doc.get_generation(self._current_page)
+                self._render_engine.set_generation(self._current_page, gen)
         self._render_current()
 
     # ── 렌더링 ────────────────────────────────────────────────────────────────
 
+    def _init_render_engine(self) -> None:
+        """RenderEngine 초기화 또는 재초기화."""
+        if self._doc is None or not self._doc.is_open or not self._doc.path:
+            return
+        try:
+            from app.ui.render_engine import RenderEngine
+            if self._render_engine:
+                self._render_engine.shutdown()
+            self._render_engine = RenderEngine()
+            self._render_engine.load_document(self._doc.path)
+            self._render_engine.render_complete.connect(self._on_async_render_done)
+        except Exception:
+            self._render_engine = None
+
     def _render_current(self) -> None:
         if self._doc is None or not self._doc.is_open:
             return
+
+        # 비동기 엔진이 있으면 비동기 렌더 시도
+        if self._render_engine:
+            # 캐시 히트 확인
+            cached = self._render_engine.get_cached(self._current_page, self._zoom)
+            if cached:
+                self._display_png(cached)
+                # 프리페치도 요청
+                self._render_engine.request_render(
+                    self._current_page, self._zoom, prefetch=True
+                )
+                return
+
+            # 캐시 미스 — 비동기 요청
+            self._render_engine.request_render(
+                self._current_page, self._zoom, prefetch=True, priority=True
+            )
+
+            # 즉시 표시할 게 없으면 동기 폴백 (첫 렌더 시)
+            if self._last_pixmap is None:
+                self._render_sync()
+            return
+
+        # 비동기 엔진 없음 → 동기 렌더
+        self._render_sync()
+
+    def _render_sync(self) -> None:
+        """동기 렌더링 (폴백)."""
+        if self._doc is None or not self._doc.is_open:
+            return
         png_bytes = self._doc.render_page(self._current_page, zoom=self._zoom)
+        self._display_png(png_bytes)
+
+    def _display_png(self, png_bytes: bytes) -> None:
+        """PNG 데이터를 화면에 표시."""
         pixmap = QPixmap.fromImage(QImage.fromData(png_bytes))
+        self._last_pixmap = pixmap
         self._scene.clear()
-        self._preview_item = None  # clear() 로 이미 제거됨
+        self._preview_item = None
         self._scene.addPixmap(pixmap)
         self._scene.setSceneRect(pixmap.rect().toRectF())
+
+    def _on_async_render_done(self, page_idx: int, zoom: float, png_bytes: bytes) -> None:
+        """비동기 렌더 완료 콜백."""
+        # 현재 보고 있는 페이지/줌과 일치할 때만 표시
+        if page_idx == self._current_page and abs(zoom - self._zoom) < 0.01:
+            self._display_png(png_bytes)
+
+    def _on_debounce_render(self) -> None:
+        """줌 debounce 타이머 만료 → 정밀 렌더."""
+        self._render_current()
