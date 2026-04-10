@@ -22,6 +22,6 @@ class TestTC165:
         win._show_about()
 
         assert "title" in called_with, "_show_about()이 QMessageBox.about을 호출하지 않았음"
-        assert "PDF 편집 툴" in called_with["title"]
+        assert "jw_pdf" in called_with["title"]
         assert "v" in called_with["text"]  # 버전 정보 포함
         assert "PyQt6" in called_with["text"]

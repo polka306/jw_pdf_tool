@@ -35,7 +35,7 @@ from app.ui.toolbar import MainToolBar
 class MainWindow(QMainWindow):
     """PDF 편집 툴 메인 윈도우."""
 
-    APP_TITLE = "PDF 편집 툴"
+    APP_TITLE = "jw_pdf"
 
     def __init__(self) -> None:
         super().__init__()

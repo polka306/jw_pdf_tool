@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import sys
 
-PROG_ID = "PDFEditTool.pdf"
-APP_NAME = "PDF 편집 툴"
+PROG_ID = "jw_pdf.pdf"
+APP_NAME = "jw_pdf"
 
 
 def register_pdf_association(

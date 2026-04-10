@@ -72,5 +72,5 @@ class TestMainWindowTheme:
     # TC-427: 빌드 결과 확인 (exe 파일명 패턴)
     def test_tc427_build_output_pattern(self):
         from app.__version__ import __version__
-        expected = f"PDF편집툴-v{__version__}"
+        expected = f"jw_pdf-v{__version__}"
         assert "2.0.0" in expected

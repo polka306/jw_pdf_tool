@@ -1,10 +1,10 @@
-; Inno Setup Script — PDF 편집 툴 v2.0.0
+; Inno Setup Script — jw_pdf v2.0.0
 ; 빌드: iscc installer\setup.iss (Inno Setup 6 필요)
 
-#define MyAppName "PDF 편집 툴"
+#define MyAppName "jw_pdf"
 #define MyAppVersion "2.0.0"
 #define MyAppPublisher "Personal"
-#define MyAppExeName "PDF편집툴-v2.0.0.exe"
+#define MyAppExeName "jw_pdf-v2.0.0.exe"
 #define MyAppAssocName "PDF 파일"
 #define MyAppAssocExt ".pdf"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
@@ -18,7 +18,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\dist
-OutputBaseFilename=PDF편집툴-v{#MyAppVersion}-Setup
+OutputBaseFilename=jw_pdf-v{#MyAppVersion}-Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

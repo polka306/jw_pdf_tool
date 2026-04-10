@@ -169,7 +169,7 @@ class TestFileAssocSpecialPath:
         from app.services.file_association import register_pdf_association
 
         result = register_pdf_association(
-            exe_path="C:\\프로그램\\PDF편집툴\\app.exe",
+            exe_path="C:\\프로그램\\jw_pdf\\app.exe",
             dry_run=True,
         )
         assert "프로그램" in result["command"]

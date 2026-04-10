@@ -1,6 +1,6 @@
 @echo off
 echo ============================================================
-echo  PDF Editor - exe build
+echo  jw_pdf - exe build
 echo ============================================================
 
 SET ROOT=%~dp0..
@@ -8,9 +8,9 @@ SET ROOT=%~dp0..
 echo [1/2] Running PyInstaller...
 
 if exist "%ROOT%\.venv\Scripts\pyinstaller.exe" (
-    "%ROOT%\.venv\Scripts\pyinstaller.exe" "%ROOT%\pdf_editor.spec" --clean --noconfirm --distpath "%ROOT%\dist" --workpath "%ROOT%\build"
+    "%ROOT%\.venv\Scripts\pyinstaller.exe" "%ROOT%\jw_pdf.spec" --clean --noconfirm --distpath "%ROOT%\dist" --workpath "%ROOT%\build"
 ) else (
-    pyinstaller "%ROOT%\pdf_editor.spec" --clean --noconfirm
+    pyinstaller "%ROOT%\jw_pdf.spec" --clean --noconfirm
 )
 
 if errorlevel 1 (

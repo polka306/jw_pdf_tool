@@ -1,7 +1,7 @@
 [project]
-name = "pdf-editor"
+name = "jw_pdf"
 version = "2.0.0"
-description = "개인용 PDF 편집 데스크탑 애플리케이션"
+description = "jw_pdf — 개인용 PDF 편집 데스크탑 애플리케이션"
 requires-python = ">=3.11"
 dependencies = [
     "PyQt6>=6.6.0",

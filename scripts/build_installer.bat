@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  PDF 편집 툴 — 설치 마법사 빌드 자동화
+REM  jw_pdf — 설치 마법사 빌드 자동화
 REM ============================================================
 REM
 REM 1. exe 빌드 (PyInstaller)
@@ -18,9 +18,9 @@ echo  [1/2] PyInstaller — exe 빌드
 echo ============================================================
 
 if exist "%ROOT%\.venv\Scripts\pyinstaller.exe" (
-    "%ROOT%\.venv\Scripts\pyinstaller.exe" "%ROOT%\pdf_editor.spec" --clean --noconfirm --distpath "%ROOT%\dist" --workpath "%ROOT%\build"
+    "%ROOT%\.venv\Scripts\pyinstaller.exe" "%ROOT%\jw_pdf.spec" --clean --noconfirm --distpath "%ROOT%\dist" --workpath "%ROOT%\build"
 ) else (
-    pyinstaller "%ROOT%\pdf_editor.spec" --clean --noconfirm
+    pyinstaller "%ROOT%\jw_pdf.spec" --clean --noconfirm
 )
 
 if errorlevel 1 (
@@ -56,8 +56,8 @@ echo.
 echo ============================================================
 echo  빌드 완료!
 echo ============================================================
-echo  - exe:        %ROOT%\dist\PDF편집툴-v2.0.0.exe
-echo  - 설치 파일:  %ROOT%\dist\PDF편집툴-v2.0.0-Setup.exe
+echo  - exe:        %ROOT%\dist\jw_pdf-v2.0.0.exe
+echo  - 설치 파일:  %ROOT%\dist\jw_pdf-v2.0.0-Setup.exe
 echo ============================================================
 
 endlocal

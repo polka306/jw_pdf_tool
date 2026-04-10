@@ -14,7 +14,7 @@ class TestPrintSettingsUI:
     def test_tc444_install_button(self):
         from app.services.print_service import VirtualPrinterService
         result = VirtualPrinterService().install(dry_run=True)
-        assert result["printer_name"] == "PDF 편집 툴 - PDF Printer"
+        assert result["printer_name"] == "jw_pdf - PDF Printer"
 
     # TC-445: 가상 프린터 제거
     def test_tc445_uninstall_button(self):

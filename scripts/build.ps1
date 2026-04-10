@@ -1,9 +1,9 @@
-﻿# PDF Editor - PyInstaller build script
+﻿# jw_pdf - PyInstaller build script
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 
 Write-Host '============================================================'
-Write-Host '  PDF Editor - exe build'
+Write-Host '  jw_pdf - exe build'
 Write-Host '============================================================'
 Write-Host ''
 
@@ -15,7 +15,7 @@ if (-not (Test-Path $pyinstaller)) {
 }
 
 Write-Host '[1/2] Running PyInstaller...'
-& $pyinstaller (Join-Path $root 'pdf_editor.spec') --clean --noconfirm
+& $pyinstaller (Join-Path $root 'jw_pdf.spec') --clean --noconfirm
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error '[ERROR] Build failed.'
@@ -24,5 +24,5 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ''
 Write-Host '[2/2] Build complete!'
-$exePath = Join-Path $root 'dist' | Join-Path -ChildPath 'PDF편집툴.exe'
+$exePath = Join-Path $root 'dist' | Join-Path -ChildPath 'jw_pdf.exe'
 Write-Host "Output: $exePath"

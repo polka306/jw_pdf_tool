@@ -2,16 +2,16 @@
 """PyInstaller 빌드 명세.
 
 빌드:
-    uv run pyinstaller pdf_editor.spec --clean
+    uv run pyinstaller jw_pdf.spec --clean
 
-결과물: dist/PDF편집툴-v{version}.exe  (단일 실행 파일, 콘솔 창 없음)
+결과물: dist/jw_pdf-v{version}.exe  (단일 실행 파일, 콘솔 창 없음)
 """
 
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(SPEC)))
 from app.__version__ import __version__
 
-_exe_name = f"PDF편집툴-v{__version__}"
+_exe_name = f"jw_pdf-v{__version__}"
 
 a = Analysis(
     ['main.py'],

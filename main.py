@@ -11,7 +11,7 @@ from app.ui.main_window import MainWindow
 
 def main() -> None:
     app = QApplication(sys.argv)
-    app.setApplicationName("PDF 편집 툴")
+    app.setApplicationName("jw_pdf")
     app.setApplicationVersion(__version__)
     app.setOrganizationName("personal")
 

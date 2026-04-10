@@ -15,7 +15,7 @@ class TestFileAssociation:
 
         # 등록 (테스트용 — 실제 레지스트리 변경)
         result = register_pdf_association(exe_path="C:\\test\\app.exe", dry_run=True)
-        assert result["progid"] == "PDFEditTool.pdf"
+        assert result["progid"] == "jw_pdf.pdf"
 
     # TC-406: shell\open\command 경로
     def test_tc406_open_command(self):

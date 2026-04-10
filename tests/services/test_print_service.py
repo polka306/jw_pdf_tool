@@ -15,7 +15,7 @@ class TestPrinterInstall:
 
         svc = VirtualPrinterService()
         result = svc.install(dry_run=True)
-        assert result["printer_name"] == "PDF 편집 툴 - PDF Printer"
+        assert result["printer_name"] == "jw_pdf - PDF Printer"
 
     # TC-433: 프린터 목록에 표시 (dry_run)
     def test_tc433_printer_in_list(self):

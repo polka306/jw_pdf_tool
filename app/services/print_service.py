@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 
-PRINTER_NAME = "PDF 편집 툴 - PDF Printer"
+PRINTER_NAME = "jw_pdf - PDF Printer"
 
 
 @dataclass
