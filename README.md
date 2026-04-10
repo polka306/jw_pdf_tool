@@ -1,4 +1,4 @@
-# PDF 편집 툴
+# jw_pdf
 
 개인용 PDF 편집 데스크탑 애플리케이션. Python + PyQt6 기반.
 
@@ -74,7 +74,7 @@ python main.py
 ## 프로젝트 구조
 
 ```
-02_PDF편집툴/
+02_jw_pdf/
 ├── main.py                      # 앱 진입점 (CLI, 단일 인스턴스, 테마)
 ├── pyproject.toml               # 의존성
 │
@@ -164,7 +164,7 @@ scripts\build.bat
 uv run pyinstaller pdf_editor.spec --clean
 ```
 
-결과물: `dist/PDF편집툴.exe`
+결과물: `dist/jw_pdf.exe`
 
 ---
 

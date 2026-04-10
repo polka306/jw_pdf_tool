@@ -1,4 +1,4 @@
-# 테스트 시나리오 — PDF 편집 툴 v1.0.0 (전체)
+# 테스트 시나리오 — jw_pdf v1.0.0 (전체)
 
 > 작성일: 2026-04-03
 > 기반 문서: `docs/FEATURE_SPEC.md`, `docs/USER_SCENARIOS.md`
@@ -1577,7 +1577,7 @@
 | 제목 | EXE 빌드 및 실행 |
 | 유형 | 기능 |
 | 사전 조건 | 개발 환경 설정 완료, PyInstaller 설치 |
-| 테스트 단계 | 1. `scripts\build.bat` 실행<br>2. `dist/PDF편집툴-v1.0.0.exe` 파일 존재 확인<br>3. EXE 파일 실행 |
+| 테스트 단계 | 1. `scripts\build.bat` 실행<br>2. `dist/jw_pdf-v1.0.0.exe` 파일 존재 확인<br>3. EXE 파일 실행 |
 | 기대 결과 | 단일 EXE 파일 생성, 실행 시 정상 동작 (콘솔 숨김) |
 | 우선순위 | 상 |
 

@@ -1,4 +1,4 @@
-# 구축 계획서 — PDF 편집 툴 v2.0.0
+# 구축 계획서 — jw_pdf v2.0.0
 
 > 작성일: 2026-04-07  
 > 기능 정의서: [FEATURE_SPEC_v2.md](FEATURE_SPEC_v2.md)  
@@ -72,7 +72,7 @@
 ### 3.1 디렉토리 구조
 
 ```
-02_PDF편집툴/
+02_jw_pdf/
 ├── main.py                      # 앱 진입점 (인자 파싱, 단일 인스턴스)
 ├── pyproject.toml
 ├── installer/                   # Inno Setup 스크립트

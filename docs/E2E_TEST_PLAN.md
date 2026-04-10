@@ -2,7 +2,7 @@
 
 > 작성일: 2026-04-03
 > 최종 병합: 2026-04-03 (Test Architect + QA Lead 상호 검증 + QA 리뷰 10건 반영)
-> 대상: PDF 편집 툴 v1.0.0
+> 대상: jw_pdf v1.0.0
 > 기반: TEST_SCENARIOS_FULL.md (TC-155~TC-166), USER_SCENARIOS.md (US-102~US-107)
 > 도구: pytest 8.x + pytest-qt 4.4.x + PyQt6 offscreen
 
@@ -961,7 +961,7 @@ class TestTC165:
 
         win._show_about()
 
-        assert "PDF 편집 툴" in called_with["title"]
+        assert "jw_pdf" in called_with["title"]
         assert "v" in called_with["text"]  # 버전 정보 포함
         assert "PyQt6" in called_with["text"]
 ```

@@ -2,7 +2,7 @@
 
 > 작성일: 2026-04-03
 > 최종 확정: 2026-04-03 (Test Architect + QA Lead 상호 검증 + QA 리뷰 전체 반영)
-> 대상: PDF 편집 툴 v1.0.0
+> 대상: jw_pdf v1.0.0
 > 기반: `docs/TEST_SCENARIOS_FULL.md`, `docs/FEATURE_SPEC.md`
 > 범위: TC-001 ~ TC-154 중 미자동화 108개 TC
 > 도구: pytest 8.x + pytest-qt 4.4.x + PyQt6 offscreen

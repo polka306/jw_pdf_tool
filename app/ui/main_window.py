@@ -33,7 +33,7 @@ from app.ui.toolbar import MainToolBar
 
 
 class MainWindow(QMainWindow):
-    """PDF 편집 툴 메인 윈도우."""
+    """jw_pdf 메인 윈도우."""
 
     APP_TITLE = "jw_pdf"
 

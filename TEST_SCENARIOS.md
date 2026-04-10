@@ -265,8 +265,8 @@
 | P5-M04 | [MANUAL] | 페이지 순서 변경 후 Ctrl+Z | 원래 순서 복원 | ⏳ |
 | P5-M05 | [MANUAL] | PgDn/PgUp으로 페이지 이동 | 페이지 이동 정상 동작 | ⏳ |
 | P5-M06 | [MANUAL] | 도움말 > 정보 | 버전, 기술 스택 표시 | ⏳ |
-| P5-M07 | [MANUAL] | 타이틀바 버전 표시 | "PDF 편집 툴 v1.0.0" 표시 | ⏳ |
-| P5-M08 | [MANUAL] | scripts\build.bat 실행 | dist/PDF편집툴.exe 생성 | ⏳ |
+| P5-M07 | [MANUAL] | 타이틀바 버전 표시 | "jw_pdf v1.0.0" 표시 | ⏳ |
+| P5-M08 | [MANUAL] | scripts\build.bat 실행 | dist/jw_pdf.exe 생성 | ⏳ |
 | P5-M09 | [MANUAL] | 생성된 exe 실행 | 앱 정상 실행 | ⏳ |
 
 ---
