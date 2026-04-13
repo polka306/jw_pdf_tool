@@ -4,6 +4,33 @@
 
 ---
 
+## [v2.0.0] 2026-04-10 — 프로그램명 jw_pdf + 최종 정리
+
+### 변경
+- 프로그램명 `PDF 편집 툴` → `jw_pdf` 전체 변경 (코드/빌드/문서/테스트 18개 파일)
+- `pdf_editor.spec` → `jw_pdf.spec` 리네임
+- `pyproject.toml` name → `jw_pdf`
+- `installer/setup.iss` MyAppName/MyAppExeName 갱신
+- 모든 문서(README/CLAUDE/CHANGE/PLAN 등 14개) 프로그램명 통일
+
+### 추가
+- `scripts/build_installer.bat` — PyInstaller + Inno Setup 2단계 자동화
+- `installer/setup.iss` — Inno Setup 설치 마법사 (파일 연결, 시작 메뉴)
+- 기본 PDF 뷰어 등록 — SettingsDialog ↔ file_association 실제 동작 연결
+- PdfViewer ↔ RenderEngine 실제 통합 (비동기 렌더, 즉시 스케일 3.7ms, debounce)
+- 검색바 ↔ SearchEngine 연결 (Ctrl+F → 검색 → 결과 이동)
+- 북마크 패널 ↔ 페이지 이동 시그널 연결
+- 보충 시나리오 심각 8건 + 보통 11건 (자동 목차, DOCX 내보내기, 양식 가져오기 등)
+
+### 테스트
+- **595개** 자동화 테스트 전체 PASS (0 skip, 0 fail)
+
+### 산출물
+- `dist/jw_pdf-v2.0.0.exe` (66MB) — 단일 실행 파일
+- `dist/jw_pdf-v2.0.0-Setup.exe` (68MB) — 설치 마법사
+
+---
+
 ## [v2.0.0] 2026-04-07 — 전체 재설계 (Phase 1~8 + UI 통합)
 
 ### 신규 모듈 — app/core/ (10개)
