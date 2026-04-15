@@ -1,0 +1,63 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run pytest
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: uv run pytest tests/ -v --tb=short
+
+  build:
+    name: Build exe (Windows)
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Read version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path app/__version__.py -Pattern '__version__\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Build with PyInstaller
+        run: uv run pyinstaller pdf_editor.spec --clean --noconfirm
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-editor-v${{ steps.ver.outputs.version }}-${{ github.sha }}
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 30
