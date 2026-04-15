@@ -52,12 +52,24 @@ jobs:
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Build with PyInstaller
-        run: uv run pyinstaller pdf_editor.spec --clean --noconfirm
+        run: uv run pyinstaller jw_pdf.spec --clean --noconfirm
 
-      - name: Upload artifact
+      - name: Build installer (Inno Setup)
+        run: iscc installer\setup.iss
+        shell: cmd
+
+      - name: Upload exe artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pdf-editor-v${{ steps.ver.outputs.version }}-${{ github.sha }}
-          path: dist/*.exe
+          name: jw_pdf-v${{ steps.ver.outputs.version }}-exe-${{ github.sha }}
+          path: dist/jw_pdf-v*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jw_pdf-v${{ steps.ver.outputs.version }}-Setup-${{ github.sha }}
+          path: dist/jw_pdf-v*-Setup.exe
           if-no-files-found: error
           retention-days: 30

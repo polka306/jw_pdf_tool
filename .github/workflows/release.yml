@@ -35,7 +35,11 @@ jobs:
         run: uv run pytest tests/ -v --tb=short
 
       - name: Build with PyInstaller
-        run: uv run pyinstaller pdf_editor.spec --clean --noconfirm
+        run: uv run pyinstaller jw_pdf.spec --clean --noconfirm
+
+      - name: Build installer (Inno Setup)
+        run: iscc installer\setup.iss
+        shell: cmd
 
       - name: Resolve tag
         id: tag
@@ -52,4 +56,6 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          files: dist/*.exe
+          files: |
+            dist/jw_pdf-v*.exe
+            dist/jw_pdf-v*-Setup.exe
