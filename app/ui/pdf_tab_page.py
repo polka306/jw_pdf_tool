@@ -46,6 +46,7 @@ class PdfTabPage(QWidget):
 
     def load(self, path: str, page: int = 0, zoom: float = 1.0) -> None:
         """PDF 파일을 열고 지정 페이지·줌으로 초기화한다."""
+        self.viewer.clear()  # 기존 렌더 엔진 스레드 종료
         self.doc.open(path)
         self.viewer.set_document(self.doc)
         self.cmd_mgr.clear()
@@ -56,4 +57,5 @@ class PdfTabPage(QWidget):
 
     def cleanup(self) -> None:
         """리소스를 해제한다. 탭 닫기 전에 호출해야 한다."""
+        self.viewer.clear()  # 렌더 엔진 스레드 종료
         self.doc.close()

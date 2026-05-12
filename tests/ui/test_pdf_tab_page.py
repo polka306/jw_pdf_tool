@@ -1,12 +1,12 @@
 """PdfTabPage 단위 테스트."""
 from __future__ import annotations
 import pytest
-from PyQt6.QtWidgets import QApplication
 from app.ui.pdf_tab_page import PdfTabPage
 
 @pytest.fixture
-def tab_page(qapp):
+def tab_page(qtbot):
     page = PdfTabPage()
+    qtbot.addWidget(page)
     yield page
     page.cleanup()
 
