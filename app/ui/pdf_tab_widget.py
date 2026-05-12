@@ -44,12 +44,12 @@ class PdfTabWidget(QTabWidget):
         widget = self.currentWidget()
         return widget if isinstance(widget, PdfTabPage) else None
 
-    def close_tab(self, index: int) -> None:
-        """탭을 닫는다. 미저장 변경이 있으면 사용자에게 확인한다."""
+    def close_tab(self, index: int, force: bool = False) -> None:
+        """탭을 닫는다. force=False이면 미저장 변경 시 사용자에게 확인한다."""
         tab = self.widget(index)
         if not isinstance(tab, PdfTabPage):
             return
-        if tab.is_modified:
+        if not force and tab.is_modified:
             reply = QMessageBox.question(
                 self, "저장 확인",
                 f"{tab.tab_title}\n\n변경 사항을 저장하겠습니까?",
@@ -93,10 +93,10 @@ class PdfTabWidget(QTabWidget):
         win.reattach_requested.connect(self._reattach_tab)
         win.show()
 
-    def close_all(self) -> None:
-        """모든 탭을 닫는다."""
+    def close_all(self, force: bool = False) -> None:
+        """모든 탭을 닫는다. force=True이면 미저장 확인 없이 즉시 닫는다."""
         for i in range(self.count() - 1, -1, -1):
-            self.close_tab(i)
+            self.close_tab(i, force=force)
 
     # ── 내부 슬롯 ────────────────────────────────────────────────────────
 

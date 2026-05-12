@@ -4,6 +4,28 @@
 
 ---
 
+## [미정] — 멀티 PDF 탭 기능
+
+### 추가
+- **멀티 탭** — 여러 PDF를 탭으로 동시에 열기 (`PdfTabPage`, `PdfTabWidget`)
+- 탭 닫기 `Ctrl+W`, 복제 `Ctrl+Shift+D`, 분리 `Ctrl+Shift+N`
+- 최근 닫은 탭 재열기 `Ctrl+Shift+T`
+- 탭 전환 `Ctrl+Tab` / `Ctrl+1`~`Ctrl+9`
+- 탭 우클릭 컨텍스트 메뉴 (닫기, 다른 탭 모두 닫기, 오른쪽 탭 모두 닫기, 복제, 새 창으로 열기, 파일 경로 복사)
+- **분리 창** (`DetachedWindow`) — 탭을 독립 창으로 분리, 탭으로 되돌리기 지원
+- 드래그앤드롭으로 여러 PDF를 각각 새 탭으로 열기
+- 각 탭이 완전 독립 상태 유지 (페이지, 줌, 검색, 어노테이션 모드)
+- 사이드바(썸네일/북마크)가 활성 탭에 자동 연동
+
+### 변경
+- `MainWindow`: 단일 `PdfDocument`/`PdfViewer` → `PdfTabWidget` 기반으로 재구성
+- 모든 파일 작업·어노테이션·검색이 활성 탭(`active_tab()`)에 위임
+
+### 테스트
+- 신규 테스트 파일: `test_pdf_tab_page.py`, `test_pdf_tab_widget.py`, `test_detached_window.py`, `test_main_window_tabs.py`
+
+---
+
 ## [v2.0.0] 2026-04-10 — 프로그램명 jw_pdf + 최종 정리
 
 ### 변경

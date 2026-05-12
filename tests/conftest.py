@@ -90,10 +90,15 @@ def open_doc(pdf_3pages):
 def main_window(qtbot):
     """MainWindow 인스턴스. teardown에서 QThread 정리 + close."""
     from app.ui.main_window import MainWindow
+    def _before_close(w):
+        if hasattr(w, '_page_panel') and hasattr(w._page_panel, '_cancel_loader'):
+            w._page_panel._cancel_loader()
+        if hasattr(w, '_tab_widget'):
+            w._tab_widget.close_all(force=True)
+
     win = MainWindow()
-    qtbot.addWidget(win)
+    qtbot.addWidget(win, before_close_func=_before_close)
     win.show()
     yield win
-    if hasattr(win, '_page_panel') and hasattr(win._page_panel, '_cancel_loader'):
-        win._page_panel._cancel_loader()
+    _before_close(win)
     win.close()

@@ -1126,10 +1126,5 @@ class MainWindow(QMainWindow):
     # ── 닫기 ─────────────────────────────────────────────────────────────────
 
     def closeEvent(self, event) -> None:
-        # 앱 종료 시에는 저장 확인 없이 즉시 정리한다.
-        for i in range(self._tab_widget.count() - 1, -1, -1):
-            tab = self._tab_widget.widget(i)
-            if isinstance(tab, PdfTabPage):
-                tab.cleanup()
-            self._tab_widget.removeTab(i)
+        self._tab_widget.close_all()
         event.accept()
