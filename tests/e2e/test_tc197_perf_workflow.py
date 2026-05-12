@@ -26,19 +26,17 @@ class TestTC197PerfWorkflow:
 
         # 줌 변경 5회
         for zoom in [1.0, 1.5, 2.0, 1.5, 1.0]:
-            if hasattr(win, '_viewer'):
-                win._viewer.set_zoom(zoom)
+            win._tab_widget.active_tab().viewer.set_zoom(zoom)
             qtbot.wait(50)
 
         # 페이지 전환 10회
         for page in range(10):
-            if hasattr(win, '_viewer'):
-                win._viewer.goto_page(page)
+            win._tab_widget.active_tab().viewer.goto_page(page)
             qtbot.wait(50)
 
         # 저장
         save_path = str(tmp_path / "perf_test_output.pdf")
-        win._doc.save(save_path)
+        win._tab_widget.active_tab().doc.save(save_path)
 
         total = time.perf_counter() - start
 

@@ -42,7 +42,7 @@ class TestTC199LargePdf:
         elapsed = time.perf_counter() - start
 
         assert elapsed < 5.0  # 5초 여유 (목표 3초)
-        assert win._doc.page_count == 1000
+        assert win._tab_widget.active_tab().doc.page_count == 1000
 
         if hasattr(win, '_page_panel') and hasattr(win._page_panel, '_cancel_loader'):
             win._page_panel._cancel_loader()

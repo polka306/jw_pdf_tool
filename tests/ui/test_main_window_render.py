@@ -25,7 +25,7 @@ class TestMainWindowRender:
 
         # 편집 후 갱신 시 reload_all이 아닌 해당 페이지만 갱신
         # (정확한 검증은 render 호출 횟수 카운트)
-        initial_page = win._viewer.current_page if hasattr(win, '_viewer') else 0
+        initial_page = win._tab_widget.active_tab().viewer.current_page
         assert initial_page >= 0  # 최소 렌더 확인
 
         if hasattr(win, '_page_panel') and hasattr(win._page_panel, '_cancel_loader'):
@@ -43,12 +43,11 @@ class TestMainWindowRender:
         qtbot.wait(500)
 
         # Undo 실행 (스택이 비어있어도 오류 없이)
-        if hasattr(win, '_cmd_mgr'):
-            win._cmd_mgr.undo()
-            qtbot.wait(200)
+        win._tab_widget.active_tab().cmd_mgr.undo()
+        qtbot.wait(200)
 
         # 정상 동작 확인
-        assert win._doc.is_open
+        assert win._tab_widget.active_tab().doc.is_open
 
         if hasattr(win, '_page_panel') and hasattr(win._page_panel, '_cancel_loader'):
             win._page_panel._cancel_loader()
@@ -66,8 +65,7 @@ class TestMainWindowRender:
         qtbot.wait(500)
 
         # 첫 페이지가 뷰어에 표시되어야 함
-        if hasattr(win, '_viewer'):
-            assert win._viewer.current_page == 0
+        assert win._tab_widget.active_tab().viewer.current_page == 0
 
         if hasattr(win, '_page_panel') and hasattr(win._page_panel, '_cancel_loader'):
             win._page_panel._cancel_loader()
@@ -84,10 +82,10 @@ class TestMainWindowRender:
         qtbot.wait(500)
 
         # 문서 닫기
-        win._doc.close()
+        win._tab_widget.active_tab().doc.close()
         qtbot.wait(200)
 
-        assert not win._doc.is_open
+        assert not win._tab_widget.active_tab().doc.is_open
 
         if hasattr(win, '_page_panel') and hasattr(win._page_panel, '_cancel_loader'):
             win._page_panel._cancel_loader()

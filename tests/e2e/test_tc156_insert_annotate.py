@@ -23,22 +23,22 @@ class TestTC156:
         load_pdf_directly(win, main_pdf)
 
         # 1) 페이지 삽입 (source의 0번 페이지를 main의 1번 앞에)
-        cmd = InsertPagesCommand(win._doc.raw, source_pdf, [0], insert_before=1)
-        win._cmd_mgr.execute(cmd)
-        assert win._doc.raw.page_count == 3  # 2 + 1
+        cmd = InsertPagesCommand(win._tab_widget.active_tab().doc.raw, source_pdf, [0], insert_before=1)
+        win._tab_widget.active_tab().cmd_mgr.execute(cmd)
+        assert win._tab_widget.active_tab().doc.raw.page_count == 3  # 2 + 1
 
         # 2) 삽입된 페이지(idx=1)에 어노테이션 추가
         style = AnnotationStyle(color=(0.0, 0.0, 1.0))
         inserted_idx = 1
-        before_drawings = len(win._doc.raw[inserted_idx].get_drawings())
+        before_drawings = len(win._tab_widget.active_tab().doc.raw[inserted_idx].get_drawings())
 
         def annotate():
-            add_rect(win._doc.raw[inserted_idx], 50, 50, 200, 150, style)
+            add_rect(win._tab_widget.active_tab().doc.raw[inserted_idx], 50, 50, 200, 150, style)
 
         win._on_annotation_requested(annotate, "사각형")
 
         # 3) 저장 및 검증
-        win._doc.save(save_path)
+        win._tab_widget.active_tab().doc.save(save_path)
 
         verify_doc = fitz.open(save_path)
         try:

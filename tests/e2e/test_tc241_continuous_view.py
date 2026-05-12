@@ -22,7 +22,7 @@ class TestTC241ContinuousView:
 
         # 기본 모드에서 어노테이션 후 저장
         save_path = str(tmp_path / "tc241_output.pdf")
-        win._doc.save(save_path)
+        win._tab_widget.active_tab().doc.save(save_path)
 
         assert os.path.exists(save_path)
 

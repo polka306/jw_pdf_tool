@@ -20,15 +20,14 @@ from app.core import page_editor
 from app.core.annotator import AnnotationStyle, AnnotationTool
 from app.core.command_manager import (
     AddAnnotationCommand,
-    CommandManager,
     DeletePagesCommand,
     InsertPagesCommand,
     MovePageCommand,
 )
-from app.core.pdf_document import PdfDocument
 from app.ui.dialogs.insert_dialog import InsertDialog
 from app.ui.page_panel import PagePanel
-from app.ui.pdf_viewer import PdfViewer
+from app.ui.pdf_tab_page import PdfTabPage
+from app.ui.pdf_tab_widget import PdfTabWidget
 from app.ui.toolbar import MainToolBar
 
 
@@ -39,14 +38,11 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self._doc = PdfDocument()
-        self._cmd_mgr = CommandManager()
         self._is_fullscreen = False
         self._recent_menu = None
         self._search_bar = None
         self._bookmark_panel = None
-        self._search_results: list = []
-        self._search_idx: int = -1
+        self._prev_tab: PdfTabPage | None = None
         self._setup_ui()
         self._connect_signals()
         self.setWindowTitle(f"{self.APP_TITLE} v{__version__}")
@@ -77,7 +73,7 @@ class MainWindow(QMainWindow):
 
         self._splitter.addWidget(self._side_tabs)
 
-        # 우측: 뷰어 + 검색바
+        # 우측: 검색바 + PDF 탭 위젯
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(0, 0, 0, 0)
@@ -91,8 +87,8 @@ class MainWindow(QMainWindow):
         except ImportError:
             pass
 
-        self._viewer = PdfViewer()
-        right_layout.addWidget(self._viewer)
+        self._tab_widget = PdfTabWidget()
+        right_layout.addWidget(self._tab_widget)
 
         self._splitter.addWidget(right_widget)
         self._splitter.setStretchFactor(0, 0)
@@ -124,6 +120,16 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         act_save_as = file_menu.addAction("다른 이름으로 저장(&A)...")
         act_save_as.triggered.connect(self._save_as)
+        file_menu.addSeparator()
+        act_close_tab = file_menu.addAction("탭 닫기(&W)")
+        act_close_tab.setShortcut(QKeySequence("Ctrl+W"))
+        act_close_tab.triggered.connect(
+            lambda: self._tab_widget.close_tab(self._tab_widget.currentIndex())
+            if self._tab_widget.currentIndex() >= 0 else None
+        )
+        act_reopen = file_menu.addAction("마지막 탭 다시 열기(&T)")
+        act_reopen.setShortcut(QKeySequence("Ctrl+Shift+T"))
+        act_reopen.triggered.connect(self._tab_widget.reopen_last_closed)
         file_menu.addSeparator()
 
         # 최근 파일
@@ -161,6 +167,24 @@ class MainWindow(QMainWindow):
         act_search.triggered.connect(self._toggle_search_bar)
         edit_menu.addAction(act_search)
 
+        # ── 편집 추가: 탭 복제 / 분리 ────────────────────────────────────────
+        edit_menu.addSeparator()
+        act_dup = QAction("탭 복제(&D)", self)
+        act_dup.setShortcut(QKeySequence("Ctrl+Shift+D"))
+        act_dup.triggered.connect(
+            lambda: self._tab_widget.duplicate_tab(self._tab_widget.currentIndex())
+            if self._tab_widget.currentIndex() >= 0 else None
+        )
+        edit_menu.addAction(act_dup)
+
+        act_detach = QAction("새 창으로 분리(&N)", self)
+        act_detach.setShortcut(QKeySequence("Ctrl+Shift+N"))
+        act_detach.triggered.connect(
+            lambda: self._tab_widget.detach_tab(self._tab_widget.currentIndex())
+            if self._tab_widget.currentIndex() >= 0 else None
+        )
+        edit_menu.addAction(act_detach)
+
         # ── 보기 ──────────────────────────────────────────────────────────────
         view_menu = menu_bar.addMenu("보기(&V)")
         view_menu.addAction(self._toolbar._act_zoom_in)
@@ -170,12 +194,12 @@ class MainWindow(QMainWindow):
 
         act_prev = QAction("이전 페이지(&[)", self)
         act_prev.setShortcut(QKeySequence("PgUp"))
-        act_prev.triggered.connect(lambda: self._viewer.goto_page(self._viewer.current_page - 1))
+        act_prev.triggered.connect(self._goto_prev_page)
         view_menu.addAction(act_prev)
 
         act_next = QAction("다음 페이지(&])", self)
         act_next.setShortcut(QKeySequence("PgDown"))
-        act_next.triggered.connect(lambda: self._viewer.goto_page(self._viewer.current_page + 1))
+        act_next.triggered.connect(self._goto_next_page)
         view_menu.addAction(act_next)
 
         view_menu.addSeparator()
@@ -183,6 +207,23 @@ class MainWindow(QMainWindow):
         act_fullscreen.setShortcut(QKeySequence("F11"))
         act_fullscreen.triggered.connect(self.toggle_fullscreen)
         view_menu.addAction(act_fullscreen)
+
+        view_menu.addSeparator()
+        act_next_tab = QAction("다음 탭", self)
+        act_next_tab.setShortcut(QKeySequence("Ctrl+Tab"))
+        act_next_tab.triggered.connect(self._next_tab)
+        view_menu.addAction(act_next_tab)
+
+        act_prev_tab = QAction("이전 탭", self)
+        act_prev_tab.setShortcut(QKeySequence("Ctrl+Shift+Tab"))
+        act_prev_tab.triggered.connect(self._prev_tab_action)
+        view_menu.addAction(act_prev_tab)
+
+        for i in range(1, 10):
+            act = QAction(f"탭 {i}(&{i})", self)
+            act.setShortcut(QKeySequence(f"Ctrl+{i}"))
+            act.triggered.connect(lambda checked, n=i: self._goto_tab(n - 1))
+            view_menu.addAction(act)
 
         # ── 페이지 ────────────────────────────────────────────────────────────
         page_menu = menu_bar.addMenu("페이지(&P)")
@@ -246,11 +287,10 @@ class MainWindow(QMainWindow):
         self._toolbar.save_requested.connect(self._save_file)
 
         # 줌
-        self._toolbar.zoom_in_requested.connect(self._viewer.zoom_in)
-        self._toolbar.zoom_out_requested.connect(self._viewer.zoom_out)
-        self._toolbar.zoom_fit_requested.connect(self._viewer.zoom_fit)
-        self._toolbar.zoom_value_changed.connect(self._viewer.set_zoom)
-        self._viewer.zoom_changed.connect(self._on_zoom_changed)
+        self._toolbar.zoom_in_requested.connect(self._zoom_in)
+        self._toolbar.zoom_out_requested.connect(self._zoom_out)
+        self._toolbar.zoom_fit_requested.connect(self._zoom_fit)
+        self._toolbar.zoom_value_changed.connect(self._set_zoom)
 
         # 페이지 편집
         self._toolbar.delete_page_requested.connect(self._delete_selected_pages)
@@ -261,7 +301,6 @@ class MainWindow(QMainWindow):
         self._page_panel.delete_requested.connect(self._delete_pages)
         self._page_panel.extract_requested.connect(self._extract_pages)
         self._page_panel.insert_requested.connect(self._insert_pages)
-        self._viewer.page_changed.connect(self._on_page_changed)
 
         # 어노테이션
         self._toolbar.tool_changed.connect(self._on_tool_changed)
@@ -271,7 +310,6 @@ class MainWindow(QMainWindow):
         self._toolbar.text_size_changed.connect(self._on_text_size_changed)
         self._toolbar.text_bold_changed.connect(self._on_text_bold_changed)
         self._toolbar.text_italic_changed.connect(self._on_text_italic_changed)
-        self._viewer.annotation_requested.connect(self._on_annotation_requested)
 
         # 검색바
         if self._search_bar:
@@ -281,10 +319,120 @@ class MainWindow(QMainWindow):
 
         # 북마크 패널
         if self._bookmark_panel:
-            self._bookmark_panel.page_requested.connect(self._viewer.goto_page)
+            self._bookmark_panel.page_requested.connect(self._on_bookmark_page_requested)
 
         # 변환
         self._toolbar.convert_requested.connect(self._open_convert_dialog)
+
+        # 탭
+        self._tab_widget.active_tab_changed.connect(self._on_active_tab_changed)
+
+    # ── 활성 탭 ───────────────────────────────────────────────────────────────
+
+    def _active_tab(self) -> PdfTabPage | None:
+        return self._tab_widget.active_tab()
+
+    def _on_active_tab_changed(self, tab: PdfTabPage | None) -> None:
+        if self._prev_tab is not None:
+            try:
+                self._prev_tab.viewer.zoom_changed.disconnect(self._on_zoom_changed)
+                self._prev_tab.viewer.page_changed.disconnect(self._on_page_changed)
+                self._prev_tab.viewer.annotation_requested.disconnect(self._on_annotation_requested)
+            except (TypeError, RuntimeError):
+                pass
+        self._prev_tab = tab
+
+        if tab is None:
+            self.setWindowTitle(f"{self.APP_TITLE} v{__version__}")
+            self._lbl_file.setText("")
+            self._lbl_page.setText("페이지: -")
+            self._lbl_zoom.setText("줌: -")
+            self._toolbar.set_document_loaded(False)
+            self._update_undo_actions(tab)
+            return
+
+        tab.viewer.zoom_changed.connect(self._on_zoom_changed)
+        tab.viewer.page_changed.connect(self._on_page_changed)
+        tab.viewer.annotation_requested.connect(self._on_annotation_requested)
+
+        if tab.doc.is_open:
+            self._page_panel.load_document(tab.doc)
+            if self._bookmark_panel:
+                self._bookmark_panel.load_bookmarks(tab.path)
+            self._update_title(tab.path)
+            self._lbl_file.setText(os.path.basename(tab.path))
+            self._toolbar.set_document_loaded(True)
+        else:
+            self.setWindowTitle(f"{self.APP_TITLE} v{__version__}")
+            self._lbl_file.setText("")
+            self._toolbar.set_document_loaded(False)
+
+        if self._search_bar:
+            if tab.search_query:
+                self._search_bar.show()
+            else:
+                self._search_bar.hide()
+
+        self._update_page_status(tab.viewer.current_page)
+        self._toolbar.update_zoom_display(tab.viewer.zoom)
+        self._toolbar.set_tool_checked(AnnotationTool.SELECT)
+        self._sync_annot_style()
+        self._update_undo_actions(tab)
+
+    # ── 줌 위임 ───────────────────────────────────────────────────────────────
+
+    def _zoom_in(self) -> None:
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.zoom_in()
+
+    def _zoom_out(self) -> None:
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.zoom_out()
+
+    def _zoom_fit(self) -> None:
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.zoom_fit()
+
+    def _set_zoom(self, zoom: float) -> None:
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.set_zoom(zoom)
+
+    def _on_bookmark_page_requested(self, page: int) -> None:
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.goto_page(page)
+
+    def _goto_prev_page(self) -> None:
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.goto_page(tab.viewer.current_page - 1)
+
+    def _goto_next_page(self) -> None:
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.goto_page(tab.viewer.current_page + 1)
+
+    # ── 탭 이동 ───────────────────────────────────────────────────────────────
+
+    def _next_tab(self) -> None:
+        n = self._tab_widget.count()
+        if n < 2:
+            return
+        self._tab_widget.setCurrentIndex((self._tab_widget.currentIndex() + 1) % n)
+
+    def _prev_tab_action(self) -> None:
+        n = self._tab_widget.count()
+        if n < 2:
+            return
+        self._tab_widget.setCurrentIndex((self._tab_widget.currentIndex() - 1) % n)
+
+    def _goto_tab(self, index: int) -> None:
+        if 0 <= index < self._tab_widget.count():
+            self._tab_widget.setCurrentIndex(index)
 
     # ── 파일 작업 ─────────────────────────────────────────────────────────────
 
@@ -295,38 +443,25 @@ class MainWindow(QMainWindow):
         if not path:
             return
         try:
-            self._doc.open(path)
+            self._tab_widget.open_pdf(path)
         except Exception as e:
             QMessageBox.critical(self, "오류", f"파일을 열 수 없습니다:\n{e}")
             return
-
-        self._cmd_mgr.clear()
-        self._page_panel.load_document(self._doc)
-        self._viewer.set_document(self._doc)
-        self._toolbar.set_document_loaded(True)
-        self._toolbar.set_tool_checked(AnnotationTool.SELECT)
-        self._update_title(path)
-        self._update_page_status(0)
-        self._toolbar.update_zoom_display(self._viewer.zoom)
-        self._lbl_file.setText(os.path.basename(path))
-        self._update_undo_actions()
-        # 초기 어노테이션 스타일 동기화
-        self._sync_annot_style()
         self._add_recent_file(path)
-        if self._bookmark_panel:
-            self._bookmark_panel.load_bookmarks(path)
 
     def _save_file(self) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
         try:
-            self._doc.save()
+            tab.doc.save()
             self._status_bar.showMessage("저장 완료", 2000)
         except Exception as e:
             QMessageBox.critical(self, "오류", f"저장 실패:\n{e}")
 
     def _save_as(self) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
         path, _ = QFileDialog.getSaveFileName(
             self, "다른 이름으로 저장", "", "PDF 파일 (*.pdf)"
@@ -336,7 +471,7 @@ class MainWindow(QMainWindow):
         if not path.lower().endswith(".pdf"):
             path += ".pdf"
         try:
-            self._doc.save(path)
+            tab.doc.save(path)
             self._update_title(path)
             self._lbl_file.setText(os.path.basename(path))
             self._status_bar.showMessage("저장 완료", 2000)
@@ -346,22 +481,24 @@ class MainWindow(QMainWindow):
     # ── 페이지 편집 ───────────────────────────────────────────────────────────
 
     def _on_page_moved(self, from_idx: int, to_idx: int) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
-        cmd = MovePageCommand(self._doc.raw, from_idx, to_idx)
-        self._cmd_mgr.execute(cmd)
+        cmd = MovePageCommand(tab.doc.raw, from_idx, to_idx)
+        tab.cmd_mgr.execute(cmd)
         self._refresh_after_edit()
-        self._viewer.goto_page(min(to_idx, self._doc.page_count - 1))
+        tab.viewer.goto_page(min(to_idx, tab.doc.page_count - 1))
         self._status_bar.showMessage(f"페이지 {from_idx + 1} → {to_idx + 1} 이동", 2000)
-        self._update_undo_actions()
+        self._update_undo_actions(tab)
 
     def _delete_selected_pages(self) -> None:
         self._delete_pages(self._page_panel.selected_indices())
 
     def _delete_pages(self, indices: list[int]) -> None:
-        if not indices or not self._doc.is_open:
+        tab = self._active_tab()
+        if not indices or tab is None or not tab.doc.is_open:
             return
-        if self._doc.page_count <= len(indices):
+        if tab.doc.page_count <= len(indices):
             QMessageBox.warning(self, "삭제 불가", "모든 페이지를 삭제할 수 없습니다.")
             return
         page_nums = ", ".join(str(i + 1) for i in sorted(indices))
@@ -371,17 +508,18 @@ class MainWindow(QMainWindow):
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
-        cmd = DeletePagesCommand(self._doc.raw, indices)
-        self._cmd_mgr.execute(cmd)
+        cmd = DeletePagesCommand(tab.doc.raw, indices)
+        tab.cmd_mgr.execute(cmd)
         self._refresh_after_edit()
         self._status_bar.showMessage(f"{len(indices)}개 페이지 삭제됨", 2000)
-        self._update_undo_actions()
+        self._update_undo_actions(tab)
 
     def _extract_selected_pages(self) -> None:
         self._extract_pages(self._page_panel.selected_indices())
 
     def _extract_pages(self, indices: list[int]) -> None:
-        if not indices or not self._doc.is_open:
+        tab = self._active_tab()
+        if not indices or tab is None or not tab.doc.is_open:
             return
         path, _ = QFileDialog.getSaveFileName(
             self, "페이지 추출 — 저장 위치 선택", "", "PDF 파일 (*.pdf)"
@@ -391,7 +529,7 @@ class MainWindow(QMainWindow):
         if not path.lower().endswith(".pdf"):
             path += ".pdf"
         try:
-            page_editor.extract_pages(self._doc.raw, indices, path)
+            page_editor.extract_pages(tab.doc.raw, indices, path)
             self._status_bar.showMessage(
                 f"{len(indices)}개 페이지 추출 → {os.path.basename(path)}", 3000
             )
@@ -399,10 +537,14 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "오류", f"추출 실패:\n{e}")
 
     def _insert_pages_at_current(self) -> None:
-        self._insert_pages(self._viewer.current_page + 1)
+        tab = self._active_tab()
+        if tab is None:
+            return
+        self._insert_pages(tab.viewer.current_page + 1)
 
     def _insert_pages(self, insert_before: int) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
         dlg = InsertDialog(self)
         if dlg.exec() != InsertDialog.DialogCode.Accepted:
@@ -412,25 +554,30 @@ class MainWindow(QMainWindow):
         if not source_path or not source_indices:
             return
         try:
-            cmd = InsertPagesCommand(self._doc.raw, source_path, source_indices, insert_before)
-            self._cmd_mgr.execute(cmd)
+            cmd = InsertPagesCommand(tab.doc.raw, source_path, source_indices, insert_before)
+            tab.cmd_mgr.execute(cmd)
             self._refresh_after_edit()
             self._status_bar.showMessage(f"{len(source_indices)}개 페이지 삽입 완료", 3000)
-            self._update_undo_actions()
+            self._update_undo_actions(tab)
         except Exception as e:
             QMessageBox.critical(self, "오류", f"삽입 실패:\n{e}")
 
     def _refresh_after_edit(self) -> None:
-        current = self._viewer.current_page
+        tab = self._active_tab()
+        if tab is None:
+            return
+        current = tab.viewer.current_page
         self._page_panel.reload_all()
-        target = min(current, self._doc.page_count - 1)
-        self._viewer.goto_page(max(0, target))
-        self._update_page_status(self._viewer.current_page)
+        target = min(current, tab.doc.page_count - 1)
+        tab.viewer.goto_page(max(0, target))
+        self._update_page_status(tab.viewer.current_page)
 
     # ── 어노테이션 ───────────────────────────────────────────────────────────
 
     def _on_tool_changed(self, tool: AnnotationTool) -> None:
-        self._viewer.set_tool(tool)
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.set_tool(tool)
         self._toolbar.set_text_tool_active(tool == AnnotationTool.TEXT)
         tool_names = {
             AnnotationTool.SELECT:  "선택",
@@ -442,78 +589,109 @@ class MainWindow(QMainWindow):
         self._lbl_tool.setText(f"도구: {tool_names.get(tool, '')}")
 
     def _on_color_changed(self, rgb: tuple) -> None:
-        style = self._viewer.annotation_style
+        tab = self._active_tab()
+        if tab is None:
+            return
+        style = tab.viewer.annotation_style
         style.color = rgb
-        self._viewer.set_annotation_style(style)
+        tab.viewer.set_annotation_style(style)
 
     def _on_width_changed(self, width: float) -> None:
-        style = self._viewer.annotation_style
+        tab = self._active_tab()
+        if tab is None:
+            return
+        style = tab.viewer.annotation_style
         style.line_width = width
-        self._viewer.set_annotation_style(style)
+        tab.viewer.set_annotation_style(style)
 
     def _on_text_font_changed(self, family: str) -> None:
-        style = self._viewer.annotation_style
+        tab = self._active_tab()
+        if tab is None:
+            return
+        style = tab.viewer.annotation_style
         style.font_family = family
-        self._viewer.set_annotation_style(style)
+        tab.viewer.set_annotation_style(style)
 
     def _on_text_size_changed(self, size: float) -> None:
-        style = self._viewer.annotation_style
+        tab = self._active_tab()
+        if tab is None:
+            return
+        style = tab.viewer.annotation_style
         style.font_size = size
-        self._viewer.set_annotation_style(style)
+        tab.viewer.set_annotation_style(style)
 
     def _on_text_bold_changed(self, bold: bool) -> None:
-        style = self._viewer.annotation_style
+        tab = self._active_tab()
+        if tab is None:
+            return
+        style = tab.viewer.annotation_style
         style.bold = bold
-        self._viewer.set_annotation_style(style)
+        tab.viewer.set_annotation_style(style)
 
     def _on_text_italic_changed(self, italic: bool) -> None:
-        style = self._viewer.annotation_style
+        tab = self._active_tab()
+        if tab is None:
+            return
+        style = tab.viewer.annotation_style
         style.italic = italic
-        self._viewer.set_annotation_style(style)
+        tab.viewer.set_annotation_style(style)
 
     def _on_annotation_requested(self, annotate_fn, description: str) -> None:
         """PdfViewer에서 어노테이션 요청 시 커맨드로 래핑해 실행합니다."""
+        tab = self._active_tab()
+        if tab is None:
+            return
         cmd = AddAnnotationCommand(
-            self._doc.raw, self._viewer.current_page, annotate_fn, description
+            tab.doc.raw, tab.viewer.current_page, annotate_fn, description
         )
-        self._cmd_mgr.execute(cmd)
-        self._viewer.refresh_page()
-        self._page_panel.reload_page(self._viewer.current_page)
+        tab.cmd_mgr.execute(cmd)
+        tab.viewer.refresh_page()
+        self._page_panel.reload_page(tab.viewer.current_page)
         self._status_bar.showMessage(f"{description} — Ctrl+Z로 취소 가능", 3000)
-        self._viewer.annotation_added.emit()  # 호환용
-        self._update_undo_actions()
+        tab.viewer.annotation_added.emit()  # 호환용
+        self._update_undo_actions(tab)
 
     # ── Undo / Redo ───────────────────────────────────────────────────────────
 
     def _undo(self) -> None:
-        desc = self._cmd_mgr.undo()
+        tab = self._active_tab()
+        if tab is None:
+            return
+        desc = tab.cmd_mgr.undo()
         if desc is None:
             return
         self._full_undo_redo_refresh()
         self._status_bar.showMessage(f"실행 취소: {desc}", 2000)
-        self._update_undo_actions()
+        self._update_undo_actions(tab)
 
     def _redo(self) -> None:
-        desc = self._cmd_mgr.redo()
+        tab = self._active_tab()
+        if tab is None:
+            return
+        desc = tab.cmd_mgr.redo()
         if desc is None:
             return
         self._full_undo_redo_refresh()
         self._status_bar.showMessage(f"다시 실행: {desc}", 2000)
-        self._update_undo_actions()
+        self._update_undo_actions(tab)
 
     def _full_undo_redo_refresh(self) -> None:
         """Undo/Redo 후 UI 전체 갱신."""
         self._refresh_after_edit()
-        self._viewer.refresh_page()
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.refresh_page()
 
-    def _update_undo_actions(self) -> None:
+    def _update_undo_actions(self, tab: PdfTabPage | None = None) -> None:
         """Undo/Redo 액션 활성화 상태와 텍스트를 갱신합니다."""
-        can_undo = self._cmd_mgr.can_undo
-        can_redo = self._cmd_mgr.can_redo
+        if tab is None:
+            tab = self._active_tab()
+        can_undo = tab.cmd_mgr.can_undo if tab else False
+        can_redo = tab.cmd_mgr.can_redo if tab else False
         self._act_undo.setEnabled(can_undo)
         self._act_redo.setEnabled(can_redo)
-        u_desc = self._cmd_mgr.undo_description
-        r_desc = self._cmd_mgr.redo_description
+        u_desc = tab.cmd_mgr.undo_description if tab else None
+        r_desc = tab.cmd_mgr.redo_description if tab else None
         self._act_undo.setText(f"실행 취소: {u_desc}(&Z)" if u_desc else "실행 취소(&Z)")
         self._act_redo.setText(f"다시 실행: {r_desc}(&Y)" if r_desc else "다시 실행(&Y)")
 
@@ -522,33 +700,22 @@ class MainWindow(QMainWindow):
     def _open_convert_dialog(self) -> None:
         from app.ui.dialogs.convert_dialog import ConvertDialog
         dlg = ConvertDialog(self)
-        dlg.conversion_done.connect(self._open_converted_pdf)
+        dlg.conversion_done.connect(self._open_converted_pdfs)
         dlg.exec()
 
-    def _open_converted_pdf(self, output_paths: list) -> None:
-        """변환 완료 후 결과 PDF를 뷰어에서 엽니다."""
-        if not output_paths:
-            return
-        path = output_paths[0]
-        try:
-            self._doc.open(path)
-        except Exception as exc:
-            QMessageBox.critical(self, "오류", f"변환된 파일을 열 수 없습니다:\n{exc}")
-            return
-        self._cmd_mgr.clear()
-        self._page_panel.load_document(self._doc)
-        self._viewer.set_document(self._doc)
-        self._toolbar.set_document_loaded(True)
-        self._toolbar.set_tool_checked(AnnotationTool.SELECT)
-        self._update_title(path)
-        self._update_page_status(0)
-        self._toolbar.update_zoom_display(self._viewer.zoom)
-        self._lbl_file.setText(os.path.basename(path))
-        self._update_undo_actions()
-        self._sync_annot_style()
+    def _open_converted_pdfs(self, output_paths: list) -> None:
+        """변환 완료 후 결과 PDF들을 새 탭에서 엽니다."""
+        for path in output_paths:
+            try:
+                self._tab_widget.open_pdf(path)
+            except Exception as exc:
+                QMessageBox.critical(self, "오류", f"변환된 파일을 열 수 없습니다:\n{exc}")
 
     def _sync_annot_style(self) -> None:
-        """툴바의 현재 색상/굵기/텍스트 스타일을 뷰어 스타일에 동기화합니다."""
+        """툴바의 현재 색상/굵기/텍스트 스타일을 활성 탭 뷰어 스타일에 동기화합니다."""
+        tab = self._active_tab()
+        if tab is None:
+            return
         style = AnnotationStyle(
             color=self._toolbar.current_annot_color,
             line_width=self._toolbar.current_annot_width,
@@ -557,7 +724,7 @@ class MainWindow(QMainWindow):
             bold=self._toolbar.current_bold,
             italic=self._toolbar.current_italic,
         )
-        self._viewer.set_annotation_style(style)
+        tab.viewer.set_annotation_style(style)
 
     # ── 이벤트 핸들러 ─────────────────────────────────────────────────────────
 
@@ -570,7 +737,9 @@ class MainWindow(QMainWindow):
         self._page_panel.set_current_page(page_idx)
 
     def _on_thumbnail_selected(self, page_idx: int) -> None:
-        self._viewer.goto_page(page_idx)
+        tab = self._active_tab()
+        if tab:
+            tab.viewer.goto_page(page_idx)
 
     # ── 유틸 ─────────────────────────────────────────────────────────────────
 
@@ -591,8 +760,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{os.path.basename(path)} — {self.APP_TITLE} v{__version__}")
 
     def _update_page_status(self, page_idx: int) -> None:
-        total = self._doc.page_count if self._doc.is_open else 0
-        self._lbl_page.setText(f"페이지: {page_idx + 1} / {total}")
+        tab = self._active_tab()
+        total = tab.doc.page_count if tab and tab.doc.is_open else 0
+        self._lbl_page.setText(f"페이지: {page_idx + 1} / {total}" if total else "페이지: -")
 
     # ── 전체 화면 ─────────────────────────────────────────────────────────────
 
@@ -626,30 +796,19 @@ class MainWindow(QMainWindow):
         for url in urls:
             path = url.toLocalFile()
             if path.lower().endswith(".pdf"):
-                self.handle_drop_file(path)
-                break
+                self._open_in_new_tab(path)
+                self._add_recent_file(path)
 
     def handle_drop_file(self, path: str) -> None:
-        """드래그앤드롭으로 파일 열기."""
+        """드래그앤드롭/외부 요청으로 파일 열기."""
+        self._open_in_new_tab(path)
+        self._add_recent_file(path)
+
+    def _open_in_new_tab(self, path: str) -> None:
         try:
-            self._doc.open(path)
+            self._tab_widget.open_pdf(path)
         except Exception as e:
             QMessageBox.critical(self, "오류", f"파일을 열 수 없습니다:\n{e}")
-            return
-        self._cmd_mgr.clear()
-        self._page_panel.load_document(self._doc)
-        self._viewer.set_document(self._doc)
-        self._toolbar.set_document_loaded(True)
-        self._toolbar.set_tool_checked(AnnotationTool.SELECT)
-        self._update_title(path)
-        self._update_page_status(0)
-        self._toolbar.update_zoom_display(self._viewer.zoom)
-        self._lbl_file.setText(os.path.basename(path))
-        self._update_undo_actions()
-        self._sync_annot_style()
-        self._add_recent_file(path)
-        if self._bookmark_panel:
-            self._bookmark_panel.load_bookmarks(path)
 
     # ── 검색 ─────────────────────────────────────────────────────────────────
 
@@ -659,69 +818,75 @@ class MainWindow(QMainWindow):
             return
         if self._search_bar.isVisible():
             self._search_bar.close_bar()
-            self._search_results = []
-            self._search_idx = -1
+            tab = self._active_tab()
+            if tab:
+                tab.search_results = []
+                tab.search_idx = -1
+                tab.search_query = ""
         else:
             self._search_bar.show()
             self._search_bar.focus_input()
 
     def _on_search_requested(self, text: str) -> None:
         """검색 실행."""
-        if not self._doc.is_open or not text:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open or not text:
             return
         try:
             from app.core.search_engine import SearchEngine
-            engine = SearchEngine(self._doc.path)
-            self._search_results = engine.search(
+            engine = SearchEngine(tab.doc.path)
+            tab.search_results = engine.search(
                 text,
                 case_sensitive=self._search_bar.is_case_sensitive(),
                 whole_word=self._search_bar.is_whole_word(),
                 regex=self._search_bar.is_regex(),
             )
-            self._search_idx = 0 if self._search_results else -1
-            self._search_bar.set_result_count(len(self._search_results), max(0, self._search_idx))
-            if self._search_results:
-                self._goto_search_result(self._search_idx)
-            self._status_bar.showMessage(f"검색: {len(self._search_results)}개 매칭", 2000)
+            tab.search_query = text
+            tab.search_idx = 0 if tab.search_results else -1
+            self._search_bar.set_result_count(
+                len(tab.search_results), max(0, tab.search_idx)
+            )
+            if tab.search_results:
+                tab.viewer.goto_page(tab.search_results[0].page_idx)
+            self._status_bar.showMessage(f"검색: {len(tab.search_results)}개 매칭", 2000)
         except Exception as e:
             self._status_bar.showMessage(f"검색 오류: {e}", 3000)
 
     def _on_search_next(self) -> None:
         """다음 검색 결과."""
-        if not self._search_results:
+        tab = self._active_tab()
+        if tab is None or not tab.search_results:
             return
-        self._search_idx = (self._search_idx + 1) % len(self._search_results)
-        self._search_bar.set_result_count(len(self._search_results), self._search_idx)
-        self._goto_search_result(self._search_idx)
+        tab.search_idx = (tab.search_idx + 1) % len(tab.search_results)
+        self._search_bar.set_result_count(len(tab.search_results), tab.search_idx)
+        tab.viewer.goto_page(tab.search_results[tab.search_idx].page_idx)
 
     def _on_search_prev(self) -> None:
         """이전 검색 결과."""
-        if not self._search_results:
+        tab = self._active_tab()
+        if tab is None or not tab.search_results:
             return
-        self._search_idx = (self._search_idx - 1) % len(self._search_results)
-        self._search_bar.set_result_count(len(self._search_results), self._search_idx)
-        self._goto_search_result(self._search_idx)
-
-    def _goto_search_result(self, idx: int) -> None:
-        """검색 결과로 이동."""
-        result = self._search_results[idx]
-        self._viewer.goto_page(result.page_idx)
+        tab.search_idx = (tab.search_idx - 1) % len(tab.search_results)
+        self._search_bar.set_result_count(len(tab.search_results), tab.search_idx)
+        tab.viewer.goto_page(tab.search_results[tab.search_idx].page_idx)
 
     # ── 페이지 회전 ───────────────────────────────────────────────────────────
 
     def _rotate_cw(self) -> None:
         """현재 페이지 시계방향 90° 회전."""
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
-        page_editor.rotate_page(self._doc.raw, self._viewer.current_page, 90)
+        page_editor.rotate_page(tab.doc.raw, tab.viewer.current_page, 90)
         self._refresh_after_edit()
         self._status_bar.showMessage("시계방향 90° 회전", 2000)
 
     def _rotate_ccw(self) -> None:
         """현재 페이지 반시계방향 90° 회전."""
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
-        page_editor.rotate_page(self._doc.raw, self._viewer.current_page, -90)
+        page_editor.rotate_page(tab.doc.raw, tab.viewer.current_page, -90)
         self._refresh_after_edit()
         self._status_bar.showMessage("반시계방향 90° 회전", 2000)
 
@@ -778,7 +943,7 @@ class MainWindow(QMainWindow):
             for path in recent[:10]:
                 act = self._recent_menu.addAction(os.path.basename(path))
                 act.setData(path)
-                act.triggered.connect(lambda checked, p=path: self.handle_drop_file(p))
+                act.triggered.connect(lambda checked, p=path: self._open_in_new_tab(p))
             if not recent:
                 self._recent_menu.addAction("(없음)").setEnabled(False)
         except Exception:
@@ -787,10 +952,11 @@ class MainWindow(QMainWindow):
     # ── 분할 ─────────────────────────────────────────────────────────────────
 
     def _open_split_dialog(self) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
         from app.ui.dialogs.split_dialog import SplitDialog
-        dlg = SplitDialog(self, page_count=self._doc.page_count)
+        dlg = SplitDialog(self, page_count=tab.doc.page_count)
         if dlg.exec() != SplitDialog.DialogCode.Accepted:
             return
         out_dir = QFileDialog.getExistingDirectory(self, "분할 결과 저장 폴더")
@@ -803,7 +969,7 @@ class MainWindow(QMainWindow):
                 kwargs["by_bookmarks"] = True
             else:
                 kwargs["pages_per_split"] = dlg.pages_per_split()
-            files = split_pdf(self._doc.path, out_dir, **kwargs)
+            files = split_pdf(tab.doc.path, out_dir, **kwargs)
             self._status_bar.showMessage(f"분할 완료: {len(files)}개 파일", 3000)
         except Exception as e:
             QMessageBox.critical(self, "오류", f"분할 실패:\n{e}")
@@ -811,14 +977,15 @@ class MainWindow(QMainWindow):
     # ── 스탬프 ────────────────────────────────────────────────────────────────
 
     def _open_stamp_dialog(self) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
         from app.ui.dialogs.stamp_dialog import StampDialog
         import fitz
         dlg = StampDialog(self)
         if dlg.exec() != StampDialog.DialogCode.Accepted:
             return
-        page = self._doc.raw[self._viewer.current_page]
+        page = tab.doc.raw[tab.viewer.current_page]
         if dlg.is_text_stamp():
             from app.core.stamp import add_text_stamp
             center = fitz.Point(page.rect.width / 2, page.rect.height / 2)
@@ -828,24 +995,25 @@ class MainWindow(QMainWindow):
         elif dlg.image_path():
             from app.core.stamp import add_image_stamp
             add_image_stamp(page, fitz.Rect(100, 100, 300, 300), dlg.image_path())
-        self._viewer.refresh_page()
-        self._page_panel.reload_page(self._viewer.current_page)
+        tab.viewer.refresh_page()
+        self._page_panel.reload_page(tab.viewer.current_page)
         self._status_bar.showMessage("스탬프 추가됨", 2000)
 
     # ── OCR ────────────────────────────────────────────────────────────────────
 
     def _open_ocr_dialog(self) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
         from app.ui.dialogs.ocr_dialog import OcrDialog
-        dlg = OcrDialog(self, page_count=self._doc.page_count)
+        dlg = OcrDialog(self, page_count=tab.doc.page_count)
         if dlg.exec() != OcrDialog.DialogCode.Accepted:
             return
         try:
             from app.core.ocr_engine import add_ocr_layer
             out_path, _ = QFileDialog.getSaveFileName(self, "OCR 결과 저장", "", "PDF (*.pdf)")
             if out_path:
-                add_ocr_layer(self._doc.path, out_path, lang=dlg.language(), dpi=dlg.dpi())
+                add_ocr_layer(tab.doc.path, out_path, lang=dlg.language(), dpi=dlg.dpi())
                 self._status_bar.showMessage("OCR 완료", 3000)
         except Exception as e:
             QMessageBox.critical(self, "오류", f"OCR 실패:\n{e}")
@@ -853,10 +1021,11 @@ class MainWindow(QMainWindow):
     # ── 최적화 ────────────────────────────────────────────────────────────────
 
     def _open_optimize_dialog(self) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
         from app.ui.dialogs.optimize_dialog import OptimizeDialog
-        file_size = os.path.getsize(self._doc.path) if self._doc.path else 0
+        file_size = os.path.getsize(tab.doc.path) if tab.doc.path else 0
         dlg = OptimizeDialog(self, current_size=file_size)
         if dlg.exec() != OptimizeDialog.DialogCode.Accepted:
             return
@@ -865,7 +1034,7 @@ class MainWindow(QMainWindow):
             return
         try:
             from app.core.optimizer import optimize_pdf
-            optimize_pdf(self._doc.path, out_path, preset=dlg.preset())
+            optimize_pdf(tab.doc.path, out_path, preset=dlg.preset())
             new_size = os.path.getsize(out_path)
             self._status_bar.showMessage(f"최적화 완료: {new_size / 1024:.0f} KB", 3000)
         except Exception as e:
@@ -875,13 +1044,15 @@ class MainWindow(QMainWindow):
 
     def _open_compare_dialog(self) -> None:
         from app.ui.dialogs.compare_dialog import CompareDialog
-        current = self._doc.path if self._doc.is_open else ""
+        tab = self._active_tab()
+        current = tab.doc.path if tab and tab.doc.is_open else ""
         CompareDialog(self, current_path=current).exec()
 
     # ── 워터마크 ──────────────────────────────────────────────────────────────
 
     def _open_watermark_dialog(self) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
         from app.ui.dialogs.watermark_dialog import WatermarkDialog
         dlg = WatermarkDialog(self)
@@ -893,12 +1064,12 @@ class MainWindow(QMainWindow):
         try:
             if dlg.current_tab() == 0:
                 from app.core.watermark import add_text_watermark
-                add_text_watermark(self._doc.path, out_path, dlg.watermark_text(),
+                add_text_watermark(tab.doc.path, out_path, dlg.watermark_text(),
                                    opacity=dlg.opacity(), rotate=dlg.rotation(),
                                    tile=dlg.is_tile())
             else:
                 from app.core.watermark import add_header_footer
-                add_header_footer(self._doc.path, out_path, **dlg.header_footer_settings())
+                add_header_footer(tab.doc.path, out_path, **dlg.header_footer_settings())
             self._status_bar.showMessage("적용 완료", 3000)
         except Exception as e:
             QMessageBox.critical(self, "오류", f"실패:\n{e}")
@@ -906,7 +1077,8 @@ class MainWindow(QMainWindow):
     # ── 보안 ──────────────────────────────────────────────────────────────────
 
     def _open_security_dialog(self) -> None:
-        if not self._doc.is_open:
+        tab = self._active_tab()
+        if tab is None or not tab.doc.is_open:
             return
         from app.ui.dialogs.security_dialog import SecurityDialog
         dlg = SecurityDialog(self)
@@ -917,7 +1089,7 @@ class MainWindow(QMainWindow):
             return
         try:
             from app.core.security import encrypt_pdf
-            encrypt_pdf(self._doc.path, out_path,
+            encrypt_pdf(tab.doc.path, out_path,
                         user_password=dlg.user_password(),
                         owner_password=dlg.owner_password(),
                         algorithm=dlg.algorithm(),
@@ -954,5 +1126,10 @@ class MainWindow(QMainWindow):
     # ── 닫기 ─────────────────────────────────────────────────────────────────
 
     def closeEvent(self, event) -> None:
-        self._doc.close()
+        # 앱 종료 시에는 저장 확인 없이 즉시 정리한다.
+        for i in range(self._tab_widget.count() - 1, -1, -1):
+            tab = self._tab_widget.widget(i)
+            if isinstance(tab, PdfTabPage):
+                tab.cleanup()
+            self._tab_widget.removeTab(i)
         event.accept()

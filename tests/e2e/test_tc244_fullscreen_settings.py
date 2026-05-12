@@ -21,8 +21,8 @@ class TestTC244FullscreenSettings:
         qtbot.wait(300)
 
         # 페이지 넘김
-        win._viewer.goto_page(2)
-        assert win._viewer.current_page == 2
+        win._tab_widget.active_tab().viewer.goto_page(2)
+        assert win._tab_widget.active_tab().viewer.current_page == 2
 
         # 설정 저장
         from app.services.settings import AppSettings

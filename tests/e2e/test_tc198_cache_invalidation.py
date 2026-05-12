@@ -23,20 +23,20 @@ class TestTC198CacheInvalidation:
         load_pdf_directly(win, pdf_3pages)
         qtbot.wait(500)
 
-        page = win._doc.raw[0]
+        page = win._tab_widget.active_tab().doc.raw[0]
 
         # 어노테이션 추가
         style = AnnotationStyle(color=(1, 0, 0), line_width=2.0)
         add_rect(page, 50, 50, 200, 150, style)
 
         # 세대 카운터 증가 확인
-        if hasattr(win._doc, 'increment_generation'):
-            win._doc.increment_generation(0)
-            assert win._doc.get_generation(0) >= 1
+        if hasattr(win._tab_widget.active_tab().doc, 'increment_generation'):
+            win._tab_widget.active_tab().doc.increment_generation(0)
+            assert win._tab_widget.active_tab().doc.get_generation(0) >= 1
 
         # 저장
         save_path = str(tmp_path / "tc198_output.pdf")
-        win._doc.save(save_path)
+        win._tab_widget.active_tab().doc.save(save_path)
 
         # 재열기
         from app.core.pdf_document import PdfDocument

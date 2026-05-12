@@ -40,7 +40,7 @@ class TestMainWindowViewer:
     # TC-237: 드래그앤드롭 PDF 열기
     def test_tc237_drag_drop_open(self, win, pdf_5pages):
         win.handle_drop_file(pdf_5pages)
-        assert win._doc.page_count == 5
+        assert win._tab_widget.active_tab().doc.page_count == 5
 
     # TC-238: 최근 파일 메뉴 표시
     def test_tc238_recent_files_menu(self, win):

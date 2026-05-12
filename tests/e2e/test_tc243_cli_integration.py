@@ -27,11 +27,11 @@ class TestTC243CliIntegration:
         load_pdf_directly(win, args.file_path)
         qtbot.wait(300)
 
-        assert win._doc.page_count == 3
+        assert win._tab_widget.active_tab().doc.page_count == 3
 
         # 저장
         save_path = str(tmp_path / "cli_output.pdf")
-        win._doc.save(save_path)
+        win._tab_widget.active_tab().doc.save(save_path)
         assert os.path.exists(save_path)
 
         # 재열기

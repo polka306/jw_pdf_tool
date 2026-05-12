@@ -6,28 +6,30 @@ monkeypatch 경로 규칙: 사용되는 모듈 기준 (예: "app.ui.main_window.
 
 from __future__ import annotations
 
-import os
-
-from PyQt6.QtWidgets import QMessageBox
-
-from app.core.annotator import AnnotationTool
+from PyQt6.QtWidgets import QMessageBox  # noqa: F401  (헬퍼 사용)
 
 
 # ── PDF 로드 헬퍼 ──────────────────────────────────────────────────────────
 
-def load_pdf_directly(win, path: str) -> None:
-    """QFileDialog 없이 MainWindow에 PDF를 직접 로드한다."""
-    win._doc.open(path)
-    win._cmd_mgr.clear()
-    win._page_panel.load_document(win._doc)
-    win._viewer.set_document(win._doc)
-    win._toolbar.set_document_loaded(True)
-    win._toolbar.set_tool_checked(AnnotationTool.SELECT)
-    win._update_page_status(0)
-    win._toolbar.update_zoom_display(win._viewer.zoom)
-    win._lbl_file.setText(os.path.basename(path))
-    win._update_undo_actions()
-    win._sync_annot_style()
+def load_pdf_directly(win, path: str):
+    """QFileDialog 없이 MainWindow에 PDF를 직접 로드한다. 활성 PdfTabPage 반환."""
+    tab = win._tab_widget.open_pdf(path)
+    return tab
+
+
+def active_doc(win):
+    """현재 활성 탭의 PdfDocument."""
+    return win._tab_widget.active_tab().doc
+
+
+def active_viewer(win):
+    """현재 활성 탭의 PdfViewer."""
+    return win._tab_widget.active_tab().viewer
+
+
+def active_cmd_mgr(win):
+    """현재 활성 탭의 CommandManager."""
+    return win._tab_widget.active_tab().cmd_mgr
 
 
 # ── QFileDialog 패치 ──────────────────────────────────────────────────────

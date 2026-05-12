@@ -29,7 +29,7 @@ class TestDocumentOpen:
         """TC-003: 열기 대화상자 취소 시 문서가 열리지 않아야 한다."""
         patch_file_dialog_open(monkeypatch, return_path=None)
         main_window._open_file()
-        assert not main_window._doc.is_open
+        assert main_window._tab_widget.active_tab() is None
 
     def test_ctrl_o_shortcut_binding(self, main_window):
         """TC-006: Ctrl+O 단축키 바인딩 확인."""
@@ -73,7 +73,7 @@ class TestDocumentClose:
     def test_close_with_doc_open(self, main_window, pdf_3pages):
         """TC-014: 문서 열린 상태에서 앱 종료."""
         load_pdf_directly(main_window, pdf_3pages)
-        assert main_window._doc.is_open
+        assert main_window._tab_widget.active_tab().doc.is_open
         main_window.close()
 
 
@@ -87,7 +87,7 @@ class TestPageDelete:
         warnings = patch_message_box_warning(monkeypatch)
         main_window._delete_pages([0])
         assert len(warnings) == 1
-        assert main_window._doc.page_count == 1
+        assert main_window._tab_widget.active_tab().doc.page_count == 1
 
     def test_delete_all_pages_blocked(self, main_window, tmp_path, monkeypatch):
         """TC-050: 2페이지 문서에서 전체 선택 삭제 시도 → 경고."""
@@ -97,14 +97,14 @@ class TestPageDelete:
         warnings = patch_message_box_warning(monkeypatch)
         main_window._delete_pages([0, 1])
         assert len(warnings) == 1
-        assert main_window._doc.page_count == 2
+        assert main_window._tab_widget.active_tab().doc.page_count == 2
 
     def test_delete_cancel(self, main_window, pdf_3pages, monkeypatch):
         """TC-052: 삭제 확인에서 No → 변경 없음."""
         load_pdf_directly(main_window, pdf_3pages)
         patch_message_box_no(monkeypatch)
         main_window._delete_pages([1])
-        assert main_window._doc.page_count == 3
+        assert main_window._tab_widget.active_tab().doc.page_count == 3
 
     def test_toolbar_delete_button(self, main_window, pdf_3pages, monkeypatch):
         """TC-053: 툴바 삭제 버튼으로 삭제."""
@@ -112,7 +112,7 @@ class TestPageDelete:
         patch_message_box_yes(monkeypatch)
         main_window._page_panel._list.setCurrentRow(0)
         main_window._toolbar._act_delete.trigger()
-        assert main_window._doc.page_count == 2
+        assert main_window._tab_widget.active_tab().doc.page_count == 2
 
 
 class TestPageExtract:
@@ -142,7 +142,7 @@ class TestPageInsert:
 
         monkeypatch.setattr("app.ui.main_window.InsertDialog", _FakeCancel)
         main_window._insert_pages(insert_before=0)
-        assert main_window._doc.page_count == 3
+        assert main_window._tab_widget.active_tab().doc.page_count == 3
 
 
 # -- TC-100~TC-112: Undo/Redo --
@@ -154,9 +154,9 @@ class TestUndoRedo:
         load_pdf_directly(main_window, pdf_3pages)
         patch_message_box_yes(monkeypatch)
         main_window._delete_pages([0])
-        assert main_window._doc.page_count == 2
+        assert main_window._tab_widget.active_tab().doc.page_count == 2
         main_window._undo()
-        assert main_window._doc.page_count == 3
+        assert main_window._tab_widget.active_tab().doc.page_count == 3
 
     def test_undo_menu_dynamic_text(self, main_window, pdf_3pages, monkeypatch):
         """TC-108: Undo 메뉴 텍스트에 설명 포함."""
@@ -173,9 +173,9 @@ class TestUndoRedo:
         patch_message_box_yes(monkeypatch)
         main_window._delete_pages([0])
         main_window._undo()
-        assert main_window._doc.page_count == 3
+        assert main_window._tab_widget.active_tab().doc.page_count == 3
         main_window._redo()
-        assert main_window._doc.page_count == 2
+        assert main_window._tab_widget.active_tab().doc.page_count == 2
 
     def test_new_action_clears_redo(self, main_window, pdf_3pages, monkeypatch):
         """TC-110: 새 액션 실행 시 Redo 스택 초기화."""
@@ -183,9 +183,9 @@ class TestUndoRedo:
         patch_message_box_yes(monkeypatch)
         main_window._delete_pages([0])
         main_window._undo()
-        assert main_window._cmd_mgr.can_redo
+        assert main_window._tab_widget.active_tab().cmd_mgr.can_redo
         main_window._delete_pages([0])
-        assert not main_window._cmd_mgr.can_redo
+        assert not main_window._tab_widget.active_tab().cmd_mgr.can_redo
 
 
 # -- TC-151: 어노테이션 후 단일 페이지 갱신 --
@@ -196,13 +196,13 @@ class TestAnnotationRefresh:
         """TC-151: 어노테이션 추가 후 페이지 갱신 및 Undo 가능."""
         load_pdf_directly(main_window, pdf_3pages)
         from app.core.annotator import AnnotationStyle, add_rect
-        page_idx = main_window._viewer.current_page
+        page_idx = main_window._tab_widget.active_tab().viewer.current_page
 
         def annotate():
-            add_rect(main_window._doc.raw[page_idx], 50, 50, 200, 150, AnnotationStyle())
+            add_rect(main_window._tab_widget.active_tab().doc.raw[page_idx], 50, 50, 200, 150, AnnotationStyle())
 
         main_window._on_annotation_requested(annotate, "사각형 추가")
-        assert main_window._cmd_mgr.can_undo
+        assert main_window._tab_widget.active_tab().cmd_mgr.can_undo
 
 
 # -- TC-064: 도구 전환 --
@@ -214,8 +214,8 @@ class TestToolSwitching:
         load_pdf_directly(main_window, pdf_3pages)
         toolbar = main_window._toolbar
         toolbar._tool_actions[AnnotationTool.TEXT].trigger()
-        assert main_window._viewer._current_tool == AnnotationTool.TEXT
+        assert main_window._tab_widget.active_tab().viewer._current_tool == AnnotationTool.TEXT
         toolbar._tool_actions[AnnotationTool.RECT].trigger()
-        assert main_window._viewer._current_tool == AnnotationTool.RECT
+        assert main_window._tab_widget.active_tab().viewer._current_tool == AnnotationTool.RECT
         toolbar._tool_actions[AnnotationTool.SELECT].trigger()
-        assert main_window._viewer._current_tool == AnnotationTool.SELECT
+        assert main_window._tab_widget.active_tab().viewer._current_tool == AnnotationTool.SELECT

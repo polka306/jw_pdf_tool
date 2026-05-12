@@ -17,14 +17,14 @@ class TestTC162:
     def test_statusbar_updates_on_page_change(self, main_window, pdf_factory):
         win = main_window
         load_pdf_directly(win, pdf_factory(num_pages=5))
-        win._viewer.goto_page(3)
+        win._tab_widget.active_tab().viewer.goto_page(3)
         assert "4 / 5" in win._lbl_page.text()
 
     def test_statusbar_shows_zoom(self, main_window, pdf_factory):
         win = main_window
         load_pdf_directly(win, pdf_factory(num_pages=1))
-        win._viewer.zoom_in()
-        zoom_pct = round(win._viewer.zoom * 100)
+        win._tab_widget.active_tab().viewer.zoom_in()
+        zoom_pct = round(win._tab_widget.active_tab().viewer.zoom * 100)
         assert str(zoom_pct) in win._lbl_zoom.text()
 
     def test_statusbar_shows_tool_name(self, main_window, pdf_factory):

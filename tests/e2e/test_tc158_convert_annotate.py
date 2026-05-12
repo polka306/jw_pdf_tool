@@ -30,28 +30,28 @@ class TestTC158:
 
         # 2) 변환된 PDF 열기
         load_pdf_directly(win, converted_path)
-        assert win._doc.page_count == 3
+        assert win._tab_widget.active_tab().doc.page_count == 3
 
         # 3) 어노테이션 추가 전 상태 기록
         page_idx = 0
-        before_drawings = len(win._doc.raw[page_idx].get_drawings())
-        before_text = win._doc.raw[page_idx].get_text()
+        before_drawings = len(win._tab_widget.active_tab().doc.raw[page_idx].get_drawings())
+        before_text = win._tab_widget.active_tab().doc.raw[page_idx].get_text()
 
         # 4) 어노테이션 추가 (_on_annotation_requested 경유)
         style = AnnotationStyle()
 
         def annotate_text():
-            add_text(win._doc.raw[page_idx], 50, 50, "Converted!", style)
+            add_text(win._tab_widget.active_tab().doc.raw[page_idx], 50, 50, "Converted!", style)
 
         win._on_annotation_requested(annotate_text, "텍스트")
 
         def annotate_rect():
-            add_rect(win._doc.raw[page_idx], 10, 70, 150, 130, style)
+            add_rect(win._tab_widget.active_tab().doc.raw[page_idx], 10, 70, 150, 130, style)
 
         win._on_annotation_requested(annotate_rect, "사각형")
 
         # 5) 저장 및 검증
-        win._doc.save(save_path)
+        win._tab_widget.active_tab().doc.save(save_path)
 
         verify_doc = fitz.open(save_path)
         try:

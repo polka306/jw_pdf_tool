@@ -20,30 +20,30 @@ class TestTC155:
 
         # 1) 문서 로드
         load_pdf_directly(win, original_path)
-        assert win._doc.is_open
-        assert win._doc.page_count == 2
+        assert win._tab_widget.active_tab().doc.is_open
+        assert win._tab_widget.active_tab().doc.page_count == 2
 
         # 2) 어노테이션 추가 전 drawings/text 기록 (상대적 비교용)
         page_idx = 0
-        before_drawings = len(win._doc.raw[page_idx].get_drawings())
-        before_text = win._doc.raw[page_idx].get_text()
+        before_drawings = len(win._tab_widget.active_tab().doc.raw[page_idx].get_drawings())
+        before_text = win._tab_widget.active_tab().doc.raw[page_idx].get_text()
 
         # 3) 텍스트 어노테이션 추가 (_on_annotation_requested 경유)
         style = AnnotationStyle(color=(1.0, 0.0, 0.0))
 
         def annotate_text():
-            add_text(win._doc.raw[page_idx], 100, 200, "E2E Test", style)
+            add_text(win._tab_widget.active_tab().doc.raw[page_idx], 100, 200, "E2E Test", style)
 
         win._on_annotation_requested(annotate_text, "텍스트 추가")
 
         # 4) 사각형 어노테이션 추가
         def annotate_rect():
-            add_rect(win._doc.raw[page_idx], 50, 300, 200, 400, style)
+            add_rect(win._tab_widget.active_tab().doc.raw[page_idx], 50, 300, 200, 400, style)
 
         win._on_annotation_requested(annotate_rect, "사각형 추가")
 
         # 5) 다른 이름으로 저장
-        win._doc.save(save_path)
+        win._tab_widget.active_tab().doc.save(save_path)
 
         # 6) 재열기하여 어노테이션 존재 확인 (fitz 직접 사용)
         verify_doc = fitz.open(save_path)
@@ -71,18 +71,18 @@ class TestTC155:
 
         style = AnnotationStyle()
         page_idx = 0
-        before_drawings = len(win._doc.raw[page_idx].get_drawings())
+        before_drawings = len(win._tab_widget.active_tab().doc.raw[page_idx].get_drawings())
 
         def add_rect_fn():
-            add_rect(win._doc.raw[page_idx], 50, 50, 200, 150, style)
+            add_rect(win._tab_widget.active_tab().doc.raw[page_idx], 50, 50, 200, 150, style)
 
         def add_ellipse_fn():
-            add_ellipse(win._doc.raw[page_idx], 250, 50, 450, 200, style)
+            add_ellipse(win._tab_widget.active_tab().doc.raw[page_idx], 250, 50, 450, 200, style)
 
         win._on_annotation_requested(add_rect_fn, "사각형")
         win._on_annotation_requested(add_ellipse_fn, "타원")
 
-        win._doc.save(save_path)
+        win._tab_widget.active_tab().doc.save(save_path)
 
         doc2 = fitz.open(save_path)
         try:

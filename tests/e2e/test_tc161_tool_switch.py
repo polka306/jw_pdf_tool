@@ -19,30 +19,30 @@ class TestTC161:
 
         # 1) 사각형 도구로 전환 (QAction trigger = 실제 메뉴 클릭 시뮬레이션)
         win._toolbar._tool_actions[AnnotationTool.RECT].trigger()
-        assert win._viewer._current_tool == AnnotationTool.RECT
+        assert win._tab_widget.active_tab().viewer._current_tool == AnnotationTool.RECT
 
         # 2) 사각형 그리기
-        before_rect = len(win._doc.raw[page_idx].get_drawings())
+        before_rect = len(win._tab_widget.active_tab().doc.raw[page_idx].get_drawings())
 
         def add_rect_fn():
-            add_rect(win._doc.raw[page_idx], 50, 50, 200, 150, style)
+            add_rect(win._tab_widget.active_tab().doc.raw[page_idx], 50, 50, 200, 150, style)
 
         win._on_annotation_requested(add_rect_fn, "사각형")
-        drawings_after_rect = len(win._doc.raw[page_idx].get_drawings())
+        drawings_after_rect = len(win._tab_widget.active_tab().doc.raw[page_idx].get_drawings())
         assert drawings_after_rect > before_rect
 
         # 3) 타원 도구 전환
         win._toolbar._tool_actions[AnnotationTool.ELLIPSE].trigger()
-        assert win._viewer._current_tool == AnnotationTool.ELLIPSE
+        assert win._tab_widget.active_tab().viewer._current_tool == AnnotationTool.ELLIPSE
 
         # 4) 타원 그리기
         def add_ellipse_fn():
-            add_ellipse(win._doc.raw[page_idx], 250, 50, 450, 200, style)
+            add_ellipse(win._tab_widget.active_tab().doc.raw[page_idx], 250, 50, 450, 200, style)
 
         win._on_annotation_requested(add_ellipse_fn, "타원")
-        drawings_after_ellipse = len(win._doc.raw[page_idx].get_drawings())
+        drawings_after_ellipse = len(win._tab_widget.active_tab().doc.raw[page_idx].get_drawings())
         assert drawings_after_ellipse > drawings_after_rect
 
         # 5) 선택 도구 복귀
         win._toolbar._tool_actions[AnnotationTool.SELECT].trigger()
-        assert win._viewer._current_tool == AnnotationTool.SELECT
+        assert win._tab_widget.active_tab().viewer._current_tool == AnnotationTool.SELECT

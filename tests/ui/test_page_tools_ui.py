@@ -31,10 +31,10 @@ class TestRotationUI:
         import fitz
         from app.core.page_editor import rotate_page
 
-        page = win._doc.raw[0]
+        page = win._tab_widget.active_tab().doc.raw[0]
         original = page.rotation
-        rotate_page(win._doc.raw, 0, 90)
-        assert win._doc.raw[0].rotation == (original + 90) % 360
+        rotate_page(win._tab_widget.active_tab().doc.raw, 0, 90)
+        assert win._tab_widget.active_tab().doc.raw[0].rotation == (original + 90) % 360
 
     # TC-266: Ctrl+R 단축키
     def test_tc266_rotate_shortcut(self, win):
