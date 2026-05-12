@@ -57,5 +57,9 @@ class PdfTabPage(QWidget):
 
     def cleanup(self) -> None:
         """리소스를 해제한다. 탭 닫기 전에 호출해야 한다."""
-        self.viewer.clear()  # 렌더 엔진 스레드 종료
+        try:
+            self.viewer.clear()  # 렌더 엔진 스레드 종료
+        except RuntimeError:
+            # Qt C++ 객체가 이미 삭제된 경우 (DetachedWindow 등에서 소유권 이전 후)
+            pass
         self.doc.close()
