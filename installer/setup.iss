@@ -1,10 +1,10 @@
-; Inno Setup Script — jw_pdf v2.0.0
+; Inno Setup Script — jw_pdf v2.1.0
 ; 빌드: iscc installer\setup.iss (Inno Setup 6 필요)
 
 #define MyAppName "jw_pdf"
-#define MyAppVersion "2.0.0"
+#define MyAppVersion "2.1.0"
 #define MyAppPublisher "Personal"
-#define MyAppExeName "jw_pdf-v2.0.0.exe"
+#define MyAppExeName "jw_pdf-v2.1.0.exe"
 #define MyAppAssocName "PDF 파일"
 #define MyAppAssocExt ".pdf"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt

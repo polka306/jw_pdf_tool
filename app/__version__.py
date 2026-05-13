@@ -12,6 +12,7 @@ Phase 이력:
   v0.4.1  중간 버그픽스 + 성능 개선 + 테스트 보강
   v1.0.0  Phase 5: Undo/Redo, 단축키, exe 패키징 ✅
   v2.0.0  전체 재설계: 비동기 렌더, 검색, 북마크, 병합/분할, 암호화, OCR, 워터마크 등
+  v2.1.0  멀티 PDF 탭 기능 (PdfTabWidget, DetachedWindow)
 """
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
