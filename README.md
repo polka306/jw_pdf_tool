@@ -165,13 +165,13 @@ scripts\build.bat
 # 또는
 uv run pyinstaller jw_pdf.spec --clean
 ```
-→ `dist/jw_pdf-v2.0.0.exe` (66MB)
+→ `dist/jw_pdf-v2.1.0.exe` (66MB)
 
 ### 설치 마법사 (exe + Inno Setup)
 ```bash
 scripts\build_installer.bat
 ```
-→ `dist/jw_pdf-v2.0.0-Setup.exe` (68MB)
+→ `dist/jw_pdf-v2.1.0-Setup.exe` (68MB)
 
 설치 마법사 포함 기능: 바탕화면 아이콘, 시작 메뉴, PDF 파일 연결, 제거 프로그램
 
