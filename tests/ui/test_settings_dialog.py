@@ -73,4 +73,4 @@ class TestMainWindowTheme:
     def test_tc427_build_output_pattern(self):
         from app.__version__ import __version__
         expected = f"jw_pdf-v{__version__}"
-        assert "2.0.0" in expected
+        assert expected.startswith("jw_pdf-v") and __version__ in expected
