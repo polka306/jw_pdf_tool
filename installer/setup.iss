@@ -4,7 +4,8 @@
 #define MyAppName "jw_pdf"
 #define MyAppVersion "2.1.0"
 #define MyAppPublisher "Personal"
-#define MyAppExeName "jw_pdf-v2.1.0.exe"
+#define MyAppSrcExe "jw_pdf-v2.1.0.exe"
+#define MyAppExeName "jw_pdf.exe"
 #define MyAppAssocName "PDF 파일"
 #define MyAppAssocExt ".pdf"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
@@ -35,7 +36,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "fileassoc"; Description: "PDF 파일 연결 (.pdf)"; GroupDescription: "파일 연결:"
 
 [Files]
-Source: "..\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; 버전 이름 exe → 설치 폴더에 jw_pdf.exe 고정 이름으로 복사 (업데이트 시 덮어씀)
+Source: "..\dist\{#MyAppSrcExe}"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
